@@ -1,58 +1,126 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# VITKA FUTSAL - Booking System v2.0
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistem penyewaan lapangan futsal modern, responsif, dan real-time untuk **Vitka Futsal**. Aplikasi ini dikembangkan menggunakan arsitektur monolitik modern dengan performa tinggi dan desain visual **Brutalist / The Verge Light Edition (Hazard White)** yang berkarakter kuat (bingkai garis tegas, flat shadows, tipografi monospace, dan warna aksen neon).
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🚀 Tech Stack & Arsitektur
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+*   **Backend & Framework Utama**: Laravel 12 (PHP 8.2+)
+*   **Frontend Integration**: Inertia.js (Menghubungkan Laravel & Vue secara seamless tanpa REST API overhead)
+*   **Frontend Framework**: Vue 3 (Composition API) dengan TypeScript (`lang="ts"`)
+*   **Styling**: Tailwind CSS v4 (Desain Brutalist Kustom dengan variabel HSL terkurasi)
+*   **Database**: PostgreSQL
+*   **Real-time Communication**: Laravel Reverb (Websockets bawaan Laravel) & Laravel Echo
+*   **Icons**: Lucide Vue Next
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## ⚡ Fitur Utama & Alur Kerja Sistem
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 1. Booking Online (Pelanggan / Tamu)
+*   **Booking Step-by-Step**: Alur intuitif mulai dari pemilihan tipe lapangan (Indoor/Outdoor) $\rightarrow$ kalender harian $\rightarrow$ grid slot waktu interaktif $\rightarrow$ formulir kontak pemesan.
+*   **Anti Double-Booking (Concurrency Protection)**: Menggunakan mekanisme *database row-level locking* (`lockForUpdate`) saat pengecekan ketersediaan slot di [BookingService](file:///E:/Study%20Area/JOKI/vitka-futsal/app/Services/BookingService.php) untuk mencegah konflik jika dua user melakukan pemesanan di slot yang sama dalam waktu bersamaan.
+*   **Success Receipt & Cetak Tiket**: Menampilkan popup modal animasi sukses pada halaman tanda terima ([BookingSuccess.vue](file:///E:/Study%20Area/JOKI/vitka-futsal/resources/js/Pages/Public/BookingSuccess.vue)) yang memiliki layout struk brutalist serta fitur cetak lokal (`window.print()`).
+*   **Lacak Status (Guest)**: Tamu non-login bisa mengecek status booking mereka menggunakan kode booking `VF-XXXXXX` melalui halaman Lacak Booking.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 2. Dashboard Analytics & Real-Time Feed
+*   **Admin Dashboard**: Menampilkan metrik harian (pendapatan, okupansi lapangan, booking masuk), visual grafik jam-jam sibuk (*peak hours*), peringkat lapangan terlaris, dan daftar aktivitas booking terbaru.
+*   **Owner Dashboard**: Menampilkan analisis keuntungan bersih periodik, omzet kotor, total pengeluaran operasional bulan ini, serta utilitas lapangan aktif.
+*   **Websocket Notification Bell**: Terdapat ikon bel di topbar admin/owner yang menerima notifikasi real-time instan menggunakan Laravel Reverb ketika ada booking masuk atau ketika pembayaran telah lunas dikonfirmasi.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### 3. Modul Pembayaran & Pengeluaran (Admin)
+*   **Konfirmasi Pembayaran**: Verifikasi transaksi sewa di lokasi dengan opsi metode bayar Cash, Transfer, dan QRIS. Konfirmasi ini otomatis memperbarui status sewa menjadi `completed` (Lunas).
+*   **Pencatatan Pengeluaran (Expense)**: Mencatat pengeluaran operasional (listrik, gaji staf, maintenance lapangan) untuk kalkulasi laba bersih.
+*   **Refund**: Memproses pembatalan berbayar dengan mengisi alasan pembatalan tertulis (min 10 karakter) dan nominal uang yang dikembalikan.
 
-## Agentic Development
+### 4. Laporan Keuangan (Owner)
+*   **Laba-Rugi (Profit & Loss)**: Penghitungan otomatis dari total pemasukan dikurangi pengeluaran operasional.
+*   **Visual Chart (No Heavy Libraries)**: Grafik performa bulanan digambar menggunakan CSS/SVG murni berkinerja tinggi untuk menjaga kecepatan loading halaman.
+*   **Ekspor Data**: Mendukung ekspor daftar transaksi, pembayaran, dan laporan keuangan ke format CSV.
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+---
 
+## 🔑 Kredensial & Hak Akses (Development)
+
+Terdapat tiga peran (*roles*) utama di dalam sistem ini:
+
+| Peran (Role) | Email Login | Password | Hak Akses Utama |
+| :--- | :--- | :--- | :--- |
+| **Owner** (Pemilik) | `owner@vitkafutsal.com` | `password` | Financial Reports, Staff List, Profit/Loss, Dashboard |
+| **Admin** (Staff) | `admin@vitkafutsal.com` | `password` | Input Manual, Reschedule, Konfirmasi Bayar, Catat Expense |
+| **Customer** (Member) | *Daftar baru via Register* | *Kustom* | Histori Booking, Detail Tiket, Pengajuan Batal Mandiri |
+
+---
+
+## 🛠️ Panduan Instalasi Lokal
+
+### 1. Persiapan Environment
+Pastikan Anda sudah menginstal **PHP 8.2+**, **Composer**, **Node.js 18+**, dan **PostgreSQL** di komputer Anda.
+
+### 2. Kloning & Install Dependensi
 ```bash
-composer require laravel/boost --dev
+# Salin file konfigurasi .env
+cp .env.example .env
 
-php artisan boost:install
+# Pasang dependensi PHP
+composer install
+
+# Pasang dependensi JavaScript
+npm install
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 3. Konfigurasi Database (.env)
+Sesuaikan pengaturan database PostgreSQL di file `.env` Anda:
+```env
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=vitka_futsal
+DB_USERNAME=laravel
+DB_PASSWORD=laravel
+```
 
-## Contributing
+### 4. Konfigurasi Websocket (Laravel Reverb)
+Pastikan port Reverb dikonfigurasi dengan benar di file `.env`:
+```env
+BROADCAST_CONNECTION=reverb
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+REVERB_APP_ID=849204
+REVERB_APP_KEY=vitkafutsalkey123
+REVERB_APP_SECRET=vitkafutsalsecret123
+REVERB_HOST="127.0.0.1"
+REVERB_PORT=8080
+REVERB_SCHEME=http
 
-## Code of Conduct
+VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
+VITE_REVERB_HOST="${REVERB_HOST}"
+VITE_REVERB_PORT="${REVERB_PORT}"
+VITE_REVERB_SCHEME="${REVERB_SCHEME}"
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 5. Inisialisasi Database & Seeding
+Jalankan migrasi database beserta data historis (akun demo, data sewa lapangan 6 bulan terakhir, pengeluaran, dan review):
+```bash
+php artisan key:generate
+php artisan migrate:fresh --seed
+```
 
-## Security Vulnerabilities
+### 6. Menjalankan Server
+Jalankan tiga terminal berikut untuk mengoperasikan aplikasi secara penuh di lokal:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+*   **Terminal 1 (Aplikasi Web)**:
+    ```bash
+    php artisan serve
+    ```
+*   **Terminal 2 (WebSocket Server)**:
+    ```bash
+    php artisan reverb:start
+    ```
+*   **Terminal 3 (Vite Assets Server)**:
+    ```bash
+    npm run dev
+    # Atau compile untuk produksi: npm run build
+    ```
 
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Aplikasi dapat diakses melalui browser di alamat [http://127.0.0.1:8000](http://127.0.0.1:8000).
