@@ -1,0 +1,639 @@
+<script setup lang="ts">
+import { ref, watch } from 'vue';
+import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import AdminLayout from '@/Layouts/AdminLayout.vue';
+import { 
+    Search, Calendar, CreditCard, DollarSign, Download, 
+    RefreshCw, CheckCircle, AlertTriangle, X, Wallet, ArrowRight, User, Clock
+} from 'lucide-vue-next';
+
+interface Court {
+    id: number;
+    name: string;
+    type: 'indoor' | 'outdoor';
+}
+
+interface User {
+    id: number;
+    name: string;
+    role: string;
+}
+
+interface Booking {
+    id: number;
+    booking_number: string;
+    customer_name: string;
+    customer_phone: string;
+    customer_email: string | null;
+    date: string;
+    start_time: string;
+    end_time: string;
+    total_price: number;
+    status: 'confirmed' | 'completed' | 'cancelled';
+    court: Court;
+    user: User | null;
+    is_manual: boolean;
+}
+
+interface Payment {
+    id: number;
+    booking_id: number;
+    payment_method: 'cash' | 'transfer' | 'qris' | null;
+    amount: number;
+    refund_amount: number;
+    refund_reason: string | null;
+    confirmed_by: number | null;
+    confirmed_at: string | null;
+    booking: Booking;
+    confirmed_by_user: User | null;
+}
+
+interface Summary {
+    total_revenue: number;
+    total_refunded: number;
+    today_revenue: number;
+    this_month_revenue: number;
+    by_method: {
+        cash: number;
+        transfer: number;
+        qris: number;
+    };
+}
+
+const props = defineProps<{
+    payments: Payment[];
+    unpaidBookings: Booking[];
+    summary: Summary;
+    filters: {
+        search?: string;
+        status?: string;
+        payment_method?: string;
+        start_date?: string;
+        end_date?: string;
+    };
+}>();
+
+// Tabs state
+const activeTab = ref<'transactions' | 'unpaid'>('transactions');
+
+// Filter states
+const searchInput = ref(props.filters.search ?? '');
+const statusInput = ref(props.filters.status ?? '');
+const methodInput = ref(props.filters.payment_method ?? '');
+const startDateInput = ref(props.filters.start_date ?? '');
+const endDateInput = ref(props.filters.end_date ?? '');
+
+const applyFilters = () => {
+    router.get(route('admin.payments.index'), {
+        search: searchInput.value,
+        status: statusInput.value,
+        payment_method: methodInput.value,
+        start_date: startDateInput.value,
+        end_date: endDateInput.value
+    }, {
+        preserveState: true,
+        replace: true
+    });
+};
+
+const clearFilters = () => {
+    searchInput.value = '';
+    statusInput.value = '';
+    methodInput.value = '';
+    startDateInput.value = '';
+    endDateInput.value = '';
+    router.get(route('admin.payments.index'), {}, {
+        preserveState: true,
+        replace: true
+    });
+};
+
+// Confirm Payment Modal
+const selectedBooking = ref<Booking | null>(null);
+const isConfirmModalOpen = ref(false);
+const confirmForm = useForm({
+    payment_method: 'cash'
+});
+
+const openConfirmModal = (booking: Booking) => {
+    selectedBooking.value = booking;
+    confirmForm.payment_method = 'cash';
+    isConfirmModalOpen.value = true;
+};
+
+const closeConfirmModal = () => {
+    selectedBooking.value = null;
+    isConfirmModalOpen.value = false;
+};
+
+const submitConfirmPayment = () => {
+    if (!selectedBooking.value) return;
+    confirmForm.post(route('admin.payments.confirm', selectedBooking.value.id), {
+        onSuccess: () => {
+            closeConfirmModal();
+        }
+    });
+};
+
+// Refund Modal
+const selectedPayment = ref<Payment | null>(null);
+const isRefundModalOpen = ref(false);
+const refundForm = useForm({
+    amount: 0,
+    reason: ''
+});
+
+const openRefundModal = (payment: Payment) => {
+    selectedPayment.value = payment;
+    refundForm.amount = Number(payment.amount) - Number(payment.refund_amount);
+    refundForm.reason = '';
+    isRefundModalOpen.value = true;
+};
+
+const closeRefundModal = () => {
+    selectedPayment.value = null;
+    isRefundModalOpen.value = false;
+};
+
+const submitRefund = () => {
+    if (!selectedPayment.value) return;
+    refundForm.post(route('admin.payments.refund', selectedPayment.value.id), {
+        onSuccess: () => {
+            closeRefundModal();
+        }
+    });
+};
+
+// Export CSV
+const exportCsv = () => {
+    const url = route('admin.payments.export', {
+        search: searchInput.value,
+        status: statusInput.value,
+        payment_method: methodInput.value,
+        start_date: startDateInput.value,
+        end_date: endDateInput.value
+    });
+    window.location.href = url;
+};
+
+// Helpers
+const formatPrice = (price: number | string) => {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0
+    }).format(Number(price));
+};
+
+const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+const formatBookingDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+};
+</script>
+
+<template>
+    <Head title="Manajemen Transaksi & Pembayaran" />
+
+    <AdminLayout>
+        <div class="space-y-6">
+            <!-- Header Card -->
+            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-6 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-verge-ultraviolet">Keuangan Lapangan</span>
+                    <h1 class="text-3xl font-display font-bold uppercase mt-1">Transaksi & Pembayaran</h1>
+                    <p class="text-xs text-verge-text-muted mt-1">Konfirmasi bayar sewa lapangan, catat pengembalian dana (refund), dan pantau transaksi masuk harian.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button @click="exportCsv" class="flex items-center justify-center gap-2 px-5 py-3 bg-verge-canvas-white hover:bg-verge-surface-light border-2 border-verge-text-primary font-mono text-xs uppercase font-bold rounded-sm shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] transition-all">
+                        <Download class="w-4 h-4" />
+                        <span>Ekspor Laporan</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bento Stats Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Pendapatan Hari Ini</span>
+                        <DollarSign class="w-4 h-4 text-verge-ultraviolet" />
+                    </div>
+                    <span class="text-2xl font-display font-bold text-verge-text-primary mt-2">{{ formatPrice(summary.today_revenue) }}</span>
+                    <span class="text-[9px] font-mono text-green-600 mt-1">Pendapatan bersih hari ini</span>
+                </div>
+
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Pendapatan Bulan Ini</span>
+                        <Wallet class="w-4 h-4 text-verge-ultraviolet" />
+                    </div>
+                    <span class="text-2xl font-display font-bold text-verge-text-primary mt-2">{{ formatPrice(summary.this_month_revenue) }}</span>
+                    <span class="text-[9px] font-mono text-verge-text-muted mt-1">Akumulasi bulan berjalan</span>
+                </div>
+
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Total Pendapatan (Filter)</span>
+                        <CheckCircle class="w-4 h-4 text-green-600" />
+                    </div>
+                    <span class="text-2xl font-display font-bold text-green-600 mt-2">{{ formatPrice(summary.total_revenue) }}</span>
+                    <span class="text-[9px] font-mono text-verge-text-muted mt-1">Setelah dikurangi refund filter</span>
+                </div>
+
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Total Refund (Filter)</span>
+                        <RefreshCw class="w-4 h-4 text-red-600" />
+                    </div>
+                    <span class="text-2xl font-display font-bold text-red-600 mt-2">{{ formatPrice(summary.total_refunded) }}</span>
+                    <span class="text-[9px] font-mono text-verge-text-muted mt-1">Uang dikembalikan</span>
+                </div>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="flex border-b-2 border-verge-text-primary gap-4 font-mono text-xs uppercase font-bold">
+                <button 
+                    @click="activeTab = 'transactions'"
+                    :class="[
+                        'pb-3 px-2 border-b-4 -mb-[3px] transition-colors',
+                        activeTab === 'transactions' 
+                            ? 'border-verge-ultraviolet text-verge-ultraviolet' 
+                            : 'border-transparent text-verge-text-muted hover:text-verge-text-primary'
+                    ]"
+                >
+                    Daftar Transaksi ({{ payments.length }})
+                </button>
+                <button 
+                    @click="activeTab = 'unpaid'"
+                    :class="[
+                        'pb-3 px-2 border-b-4 -mb-[3px] transition-colors',
+                        activeTab === 'unpaid' 
+                            ? 'border-verge-ultraviolet text-verge-ultraviolet' 
+                            : 'border-transparent text-verge-text-muted hover:text-verge-text-primary'
+                    ]"
+                >
+                    Menunggu Pembayaran ({{ unpaidBookings.length }})
+                </button>
+            </div>
+
+            <!-- TAB 1: Daftar Transaksi -->
+            <div v-if="activeTab === 'transactions'" class="space-y-6">
+                <!-- Filters -->
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-4 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                        <!-- Search -->
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-verge-text-muted">
+                                <Search class="w-3.5 h-3.5" />
+                            </div>
+                            <input v-model="searchInput" type="text" @keyup.enter="applyFilters" placeholder="No. Booking / Customer..." class="w-full border-2 border-verge-text-primary pl-9 pr-4 py-2 rounded-sm text-xs font-mono focus:outline-none focus:border-verge-ultraviolet" />
+                        </div>
+
+                        <!-- Status -->
+                        <select v-model="statusInput" @change="applyFilters" class="border-2 border-verge-text-primary px-3 py-2 rounded-sm text-xs font-mono focus:outline-none focus:border-verge-ultraviolet bg-verge-canvas-white">
+                            <option value="">Semua Status</option>
+                            <option value="confirmed">Confirmed (Lunas)</option>
+                            <option value="pending">Pending Verifikasi</option>
+                            <option value="refunded">Telah Direfund</option>
+                        </select>
+
+                        <!-- Method -->
+                        <select v-model="methodInput" @change="applyFilters" class="border-2 border-verge-text-primary px-3 py-2 rounded-sm text-xs font-mono focus:outline-none focus:border-verge-ultraviolet bg-verge-canvas-white">
+                            <option value="">Semua Metode</option>
+                            <option value="cash">Cash</option>
+                            <option value="transfer">Transfer</option>
+                            <option value="qris">QRIS</option>
+                        </select>
+
+                        <!-- Start Date -->
+                        <input v-model="startDateInput" type="date" @change="applyFilters" class="border-2 border-verge-text-primary px-3 py-1.5 rounded-sm text-xs font-mono focus:outline-none focus:border-verge-ultraviolet bg-verge-canvas-white" />
+
+                        <!-- End Date -->
+                        <input v-model="endDateInput" type="date" @change="applyFilters" class="border-2 border-verge-text-primary px-3 py-1.5 rounded-sm text-xs font-mono focus:outline-none focus:border-verge-ultraviolet bg-verge-canvas-white" />
+                    </div>
+
+                    <div class="flex justify-end gap-3">
+                        <button v-if="searchInput || statusInput || methodInput || startDateInput || endDateInput" @click="clearFilters" class="px-4 py-2 border border-verge-text-primary hover:bg-verge-surface-light rounded-sm text-xs font-mono flex items-center gap-1 transition-colors">
+                            <X class="w-3.5 h-3.5" />
+                            <span>Reset Filter</span>
+                        </button>
+                        <button @click="applyFilters" class="px-5 py-2 bg-verge-canvas-black text-verge-canvas-white border border-verge-text-primary hover:bg-verge-text-muted font-mono text-xs uppercase font-bold rounded-sm transition-colors">
+                            Terapkan Filter
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Payments Table -->
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-verge-surface-light border-b-2 border-verge-text-primary font-mono text-[10px] uppercase font-bold text-verge-text-muted">
+                                    <th class="py-3 px-4">No. Booking</th>
+                                    <th class="py-3 px-4">Customer</th>
+                                    <th class="py-3 px-4">Lapangan</th>
+                                    <th class="py-3 px-4">Jumlah Bayar</th>
+                                    <th class="py-3 px-4">Metode</th>
+                                    <th class="py-3 px-4">Status</th>
+                                    <th class="py-3 px-4">Konfirmasi</th>
+                                    <th class="py-3 px-4 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y border-verge-text-primary/10 text-xs">
+                                <tr v-if="payments.length === 0">
+                                    <td colspan="8" class="py-8 px-4 text-center font-mono text-verge-text-muted">
+                                        Tidak ditemukan transaksi pembayaran yang sesuai.
+                                    </td>
+                                </tr>
+                                <tr v-for="payment in payments" :key="payment.id" class="hover:bg-verge-surface-light/50 transition-colors">
+                                    <td class="py-3.5 px-4 font-mono font-bold text-verge-ultraviolet">
+                                        {{ payment.booking?.booking_number }}
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        <div class="font-bold">{{ payment.booking?.customer_name }}</div>
+                                        <div class="text-[10px] text-verge-text-muted font-mono">{{ payment.booking?.customer_phone }}</div>
+                                    </td>
+                                    <td class="py-3.5 px-4 font-bold uppercase">
+                                        {{ payment.booking?.court?.name ?? '-' }}
+                                    </td>
+                                    <td class="py-3.5 px-4 font-mono font-bold">
+                                        <div>{{ formatPrice(payment.amount) }}</div>
+                                        <div v-if="Number(payment.refund_amount) > 0" class="text-[9px] text-red-600">
+                                            Refund: {{ formatPrice(payment.refund_amount) }}
+                                        </div>
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        <span class="font-mono text-[10px] font-bold uppercase bg-verge-surface-light border border-verge-text-primary/15 px-2 py-0.5 rounded-sm">
+                                            {{ payment.payment_method ?? 'CASH' }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        <span v-if="Number(payment.refund_amount) >= Number(payment.amount)" class="inline-flex items-center gap-1 font-mono text-[9px] uppercase font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-sm">
+                                            Refunded Full
+                                        </span>
+                                        <span v-else-if="Number(payment.refund_amount) > 0" class="inline-flex items-center gap-1 font-mono text-[9px] uppercase font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-sm">
+                                            Refunded Partial
+                                        </span>
+                                        <span v-else-if="payment.confirmed_at" class="inline-flex items-center gap-1 font-mono text-[9px] uppercase font-bold text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-sm">
+                                            Confirmed
+                                        </span>
+                                        <span v-else class="inline-flex items-center gap-1 font-mono text-[9px] uppercase font-bold text-verge-text-muted bg-verge-surface-light border border-verge-text-primary/10 px-2 py-0.5 rounded-sm">
+                                            Pending
+                                        </span>
+                                    </td>
+                                    <td class="py-3.5 px-4 font-mono text-[10px] text-verge-text-muted">
+                                        <div v-if="payment.confirmed_at">
+                                            <div>By: {{ payment.confirmed_by_user?.name ?? 'Admin' }}</div>
+                                            <div>{{ formatDate(payment.confirmed_at) }}</div>
+                                        </div>
+                                        <div v-else>-</div>
+                                    </td>
+                                    <td class="py-3.5 px-4 text-right">
+                                        <div class="flex justify-end gap-2">
+                                            <button 
+                                                v-if="Number(payment.refund_amount) < Number(payment.amount)" 
+                                                @click="openRefundModal(payment)" 
+                                                class="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-300 font-mono text-[10px] uppercase font-bold rounded-sm transition-colors"
+                                            >
+                                                Refund
+                                            </button>
+                                            <span v-else class="text-[10px] font-mono text-verge-text-muted italic">No Action</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: Menunggu Pembayaran -->
+            <div v-if="activeTab === 'unpaid'" class="space-y-6">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-verge-surface-light border-b-2 border-verge-text-primary font-mono text-[10px] uppercase font-bold text-verge-text-muted">
+                                    <th class="py-3 px-4">No. Booking</th>
+                                    <th class="py-3 px-4">Customer</th>
+                                    <th class="py-3 px-4">Lapangan</th>
+                                    <th class="py-3 px-4">Jadwal Main</th>
+                                    <th class="py-3 px-4">Total Tagihan</th>
+                                    <th class="py-3 px-4">Metode Bayar</th>
+                                    <th class="py-3 px-4 text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y border-verge-text-primary/10 text-xs">
+                                <tr v-if="unpaidBookings.length === 0">
+                                    <td colspan="7" class="py-8 px-4 text-center font-mono text-verge-text-muted">
+                                        Tidak ada booking yang menunggu konfirmasi pembayaran.
+                                    </td>
+                                </tr>
+                                <tr v-for="booking in unpaidBookings" :key="booking.id" class="hover:bg-verge-surface-light/50 transition-colors">
+                                    <td class="py-3.5 px-4 font-mono font-bold text-verge-ultraviolet">
+                                        {{ booking.booking_number }}
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        <div class="font-bold flex items-center gap-1">
+                                            <span>{{ booking.customer_name }}</span>
+                                            <span v-if="booking.is_manual" class="bg-verge-canvas-black text-verge-canvas-white text-[8px] font-mono font-bold uppercase px-1 rounded-sm">
+                                                Manual
+                                            </span>
+                                        </div>
+                                        <div class="text-[10px] text-verge-text-muted font-mono flex items-center gap-1 mt-0.5">
+                                            <User class="w-3 h-3" />
+                                            <span>{{ booking.customer_phone }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3.5 px-4 font-bold uppercase">
+                                        {{ booking.court?.name ?? '-' }}
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        <div class="font-mono font-bold">{{ formatBookingDate(booking.date) }}</div>
+                                        <div class="text-[10px] text-verge-text-muted font-mono flex items-center gap-1 mt-0.5">
+                                            <Clock class="w-3 h-3 text-verge-ultraviolet" />
+                                            <span>{{ booking.start_time.substring(0, 5) }} - {{ booking.end_time.substring(0, 5) }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3.5 px-4 font-mono font-bold text-verge-ultraviolet">
+                                        {{ formatPrice(booking.total_price) }}
+                                    </td>
+                                    <td class="py-3.5 px-4">
+                                        <span class="font-mono text-[9px] uppercase font-bold text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-sm">
+                                            BELUM BAYAR
+                                        </span>
+                                    </td>
+                                    <td class="py-3.5 px-4 text-right">
+                                        <button 
+                                            @click="openConfirmModal(booking)" 
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 bg-verge-jelly-mint text-verge-text-primary border-2 border-verge-text-primary font-mono text-[10px] uppercase font-bold rounded-sm shadow-[2px_2px_0px_0px_rgba(19,19,19,1)] hover:bg-[#00e0a5] transition-all"
+                                        >
+                                            Konfirmasi Bayar
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: Confirm Payment -->
+        <div v-if="isConfirmModalOpen && selectedBooking" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-verge-canvas-black/50 backdrop-blur-xs">
+            <div class="bg-verge-canvas-white border-2 border-verge-text-primary max-w-md w-full rounded-lg shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] overflow-hidden">
+                <div class="bg-verge-surface-light border-b-2 border-verge-text-primary p-4 flex items-center justify-between">
+                    <h3 class="font-display text-lg font-bold uppercase">Konfirmasi Pembayaran</h3>
+                    <button @click="closeConfirmModal" class="p-1 border border-verge-text-primary/10 hover:bg-verge-canvas-black/5 rounded-sm">
+                        <X class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <form @submit.prevent="submitConfirmPayment" class="p-5 space-y-4">
+                    <!-- Detail summary -->
+                    <div class="bg-verge-surface-light border-2 border-verge-text-primary p-4 rounded-md font-mono text-xs space-y-2">
+                        <div class="flex justify-between border-b border-verge-text-primary/10 pb-1.5">
+                            <span class="text-verge-text-muted">Booking No:</span>
+                            <span class="font-bold text-verge-ultraviolet">{{ selectedBooking.booking_number }}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-verge-text-primary/10 pb-1.5">
+                            <span class="text-verge-text-muted">Nama Pelanggan:</span>
+                            <span class="font-bold">{{ selectedBooking.customer_name }}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-verge-text-primary/10 pb-1.5">
+                            <span class="text-verge-text-muted">Lapangan:</span>
+                            <span class="font-bold uppercase">{{ selectedBooking.court?.name }}</span>
+                        </div>
+                        <div class="flex justify-between pt-1">
+                            <span class="text-verge-text-muted font-bold">Total Pembayaran:</span>
+                            <span class="font-bold text-verge-ultraviolet text-sm">{{ formatPrice(selectedBooking.total_price) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Payment Method Select -->
+                    <div class="space-y-1">
+                        <label class="font-mono text-[10px] uppercase font-bold text-verge-text-muted">Metode Pembayaran</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <label 
+                                class="border-2 border-verge-text-primary p-2.5 rounded-sm flex flex-col items-center justify-center gap-1 cursor-pointer font-mono text-[10px] uppercase font-bold text-center transition-all",
+                                :class="[confirmForm.payment_method === 'cash' ? 'bg-verge-jelly-mint text-verge-text-primary border-verge-text-primary shadow-[2px_2px_0px_0px_rgba(19,19,19,1)]' : 'bg-verge-canvas-white hover:bg-verge-surface-light']"
+                            >
+                                <input type="radio" value="cash" v-model="confirmForm.payment_method" class="sr-only" />
+                                <span>CASH</span>
+                            </label>
+                            <label 
+                                class="border-2 border-verge-text-primary p-2.5 rounded-sm flex flex-col items-center justify-center gap-1 cursor-pointer font-mono text-[10px] uppercase font-bold text-center transition-all",
+                                :class="[confirmForm.payment_method === 'transfer' ? 'bg-verge-jelly-mint text-verge-text-primary border-verge-text-primary shadow-[2px_2px_0px_0px_rgba(19,19,19,1)]' : 'bg-verge-canvas-white hover:bg-verge-surface-light']"
+                            >
+                                <input type="radio" value="transfer" v-model="confirmForm.payment_method" class="sr-only" />
+                                <span>TRANSFER</span>
+                            </label>
+                            <label 
+                                class="border-2 border-verge-text-primary p-2.5 rounded-sm flex flex-col items-center justify-center gap-1 cursor-pointer font-mono text-[10px] uppercase font-bold text-center transition-all",
+                                :class="[confirmForm.payment_method === 'qris' ? 'bg-verge-jelly-mint text-verge-text-primary border-verge-text-primary shadow-[2px_2px_0px_0px_rgba(19,19,19,1)]' : 'bg-verge-canvas-white hover:bg-verge-surface-light']"
+                            >
+                                <input type="radio" value="qris" v-model="confirmForm.payment_method" class="sr-only" />
+                                <span>QRIS</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex justify-end gap-3 font-mono text-xs uppercase font-bold">
+                        <button type="button" @click="closeConfirmModal" class="px-4 py-2.5 border-2 border-verge-text-primary hover:bg-verge-surface-light rounded-sm">
+                            Batal
+                        </button>
+                        <button type="submit" :disabled="confirmForm.processing" class="px-5 py-2.5 bg-verge-canvas-black text-verge-canvas-white hover:bg-verge-text-muted border border-verge-text-primary rounded-sm shadow-[2px_2px_0px_0px_rgba(19,19,19,1)] disabled:opacity-50 flex items-center gap-2">
+                            <span>Submit Konfirmasi</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: Refund Payment -->
+        <div v-if="isRefundModalOpen && selectedPayment" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-verge-canvas-black/50 backdrop-blur-xs">
+            <div class="bg-verge-canvas-white border-2 border-verge-text-primary max-w-md w-full rounded-lg shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] overflow-hidden">
+                <div class="bg-verge-surface-light border-b-2 border-verge-text-primary p-4 flex items-center justify-between">
+                    <h3 class="font-display text-lg font-bold uppercase">Proses Refund Transaksi</h3>
+                    <button @click="closeRefundModal" class="p-1 border border-verge-text-primary/10 hover:bg-verge-canvas-black/5 rounded-sm">
+                        <X class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <form @submit.prevent="submitRefund" class="p-5 space-y-4">
+                    <!-- Detail summary -->
+                    <div class="bg-verge-surface-light border-2 border-verge-text-primary p-4 rounded-md font-mono text-xs space-y-2">
+                        <div class="flex justify-between border-b border-verge-text-primary/10 pb-1.5">
+                            <span class="text-verge-text-muted">Booking No:</span>
+                            <span class="font-bold text-verge-ultraviolet">{{ selectedPayment.booking?.booking_number }}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-verge-text-primary/10 pb-1.5">
+                            <span class="text-verge-text-muted">Total Pembayaran:</span>
+                            <span class="font-bold">{{ formatPrice(selectedPayment.amount) }}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-verge-text-primary/10 pb-1.5">
+                            <span class="text-verge-text-muted">Telah Direfund:</span>
+                            <span class="font-bold text-red-600">{{ formatPrice(selectedPayment.refund_amount) }}</span>
+                        </div>
+                        <div class="flex justify-between pt-1">
+                            <span class="text-verge-text-muted font-bold">Maksimal Sisa Refund:</span>
+                            <span class="font-bold text-verge-text-primary">{{ formatPrice(Number(selectedPayment.amount) - Number(selectedPayment.refund_amount)) }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Refund Amount Input -->
+                    <div class="space-y-1">
+                        <label for="refund_amount" class="font-mono text-[10px] uppercase font-bold text-verge-text-muted">Jumlah Refund (Rupiah)</label>
+                        <input 
+                            id="refund_amount" 
+                            type="number" 
+                            v-model="refundForm.amount" 
+                            required 
+                            :max="Number(selectedPayment.amount) - Number(selectedPayment.refund_amount)"
+                            min="1"
+                            class="w-full border-2 border-verge-text-primary p-2.5 rounded-sm font-sans focus:outline-none focus:border-verge-ultraviolet" 
+                        />
+                        <span v-if="refundForm.errors.amount" class="text-[10px] font-mono text-red-600 block">{{ refundForm.errors.amount }}</span>
+                    </div>
+
+                    <!-- Refund Reason Input -->
+                    <div class="space-y-1">
+                        <label for="refund_reason" class="font-mono text-[10px] uppercase font-bold text-verge-text-muted">Alasan Refund (Minimal 10 Karakter)</label>
+                        <textarea 
+                            id="refund_reason" 
+                            v-model="refundForm.reason" 
+                            required 
+                            rows="3"
+                            placeholder="Tulis alasan pembatalan / pengembalian uang sewa..."
+                            class="w-full border-2 border-verge-text-primary p-2.5 rounded-sm font-sans focus:outline-none focus:border-verge-ultraviolet text-xs"
+                        ></textarea>
+                        <span v-if="refundForm.errors.reason" class="text-[10px] font-mono text-red-600 block">{{ refundForm.errors.reason }}</span>
+                    </div>
+
+                    <div class="pt-2 flex justify-end gap-3 font-mono text-xs uppercase font-bold">
+                        <button type="button" @click="closeRefundModal" class="px-4 py-2.5 border-2 border-verge-text-primary hover:bg-verge-surface-light rounded-sm">
+                            Batal
+                        </button>
+                        <button type="submit" :disabled="refundForm.processing || refundForm.reason.length < 10" class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-verge-canvas-white border-2 border-verge-text-primary rounded-sm shadow-[2px_2px_0px_0px_rgba(19,19,19,1)] disabled:opacity-50">
+                            Proses Refund
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </AdminLayout>
+</template>

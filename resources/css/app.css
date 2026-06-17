@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import "tailwindcss";
+
+@theme {
+    /* --- The Verge Color Palette Tokens (Light Theme Inversion) --- */
+    --color-verge-canvas-white: #ffffff;          /* Background Utama Layout */
+    --color-verge-surface-light: #f4f4f5;         /* Background Card/Tabel Standard */
+    --color-verge-canvas-black: #131313;          /* Spotlight Card / Kontainer Gelap */
+    
+    --color-verge-jelly-mint: #3cffd0;            /* HANYA untuk background tombol/badge (TEKS WAJIB HITAM) */
+    --color-verge-ultraviolet: #5200ff;           /* Warna Aktif Utama, Link Teks, & Active Tabs */
+    --color-verge-deep-link-blue: #3860be;        /* Warna hover tombol dan link */
+    
+    --color-verge-text-primary: #131313;          /* Teks Gelap Utama */
+    --color-verge-text-muted: #52525b;            /* Teks Deskripsi Abu-abu */
+    
+    /* --- Typography Families --- */
+    --font-display: 'Oswald', sans-serif;
+    --font-sans: 'Space Grotesk', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+}
+
+/* Hubungkan variabel CSS PrimeVue ke Token Tailwind v4 */
+:root {
+    --p-font-family: var(--font-sans);
+    --p-primary-color: var(--color-verge-ultraviolet);
+    --p-primary-hover-color: var(--color-verge-deep-link-blue);
+    --p-primary-contrast-color: var(--color-verge-canvas-white);
+    
+    /* Mapped PrimeVue Surfaces */
+    --p-surface-0: var(--color-verge-canvas-white);
+    --p-surface-50: #fafafa;
+    --p-surface-100: var(--color-verge-surface-light);
+    --p-surface-200: #e4e4e7;
+    --p-surface-300: #d4d4d8;
+    --p-surface-400: #a1a1aa;
+    --p-surface-500: #71717a;
+    --p-surface-900: var(--color-verge-canvas-black);
+    
+    /* Global Radius Reset */
+    --p-border-radius-sm: 2px;
+    --p-border-radius-md: 4px;
+    --p-border-radius-lg: 20px;
+}
+
+body {
+    background-color: var(--color-verge-canvas-white);
+    color: var(--color-verge-text-primary);
+    font-family: var(--font-sans);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+}
