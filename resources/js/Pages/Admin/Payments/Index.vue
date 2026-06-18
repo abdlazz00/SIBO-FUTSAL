@@ -6,7 +6,7 @@ import Pagination from '@/Components/Pagination.vue';
 import gsap from 'gsap';
 import { 
     Search, Calendar, CreditCard, DollarSign, Download, 
-    RefreshCw, CheckCircle, AlertTriangle, X, Wallet, ArrowRight, User, Clock
+    RefreshCw, CheckCircle, AlertTriangle, X, Wallet, ArrowRight, User, Clock, Printer
 } from 'lucide-vue-next';
 
 interface Court {
@@ -139,11 +139,35 @@ const closeConfirmModal = () => {
     isConfirmModalOpen.value = false;
 };
 
+// Receipt Modal State
+const isReceiptModalOpen = ref(false);
+const completedPaymentData = ref<any>(null);
+
+const printReceipt = () => {
+    window.print();
+};
+
 const submitConfirmPayment = () => {
     if (!selectedBooking.value) return;
+    const currentBooking = { ...selectedBooking.value };
+    const selectedMethod = confirmForm.payment_method;
+    
     confirmForm.post(route('admin.payments.confirm', selectedBooking.value.id), {
         onSuccess: () => {
             closeConfirmModal();
+            // Show receipt
+            completedPaymentData.value = {
+                booking_number: currentBooking.booking_number,
+                customer_name: currentBooking.customer_name,
+                court_name: currentBooking.court?.name ?? '-',
+                date: currentBooking.date,
+                start_time: currentBooking.start_time,
+                end_time: currentBooking.end_time,
+                total_price: currentBooking.total_price,
+                payment_method: selectedMethod,
+                confirmed_at: new Date().toISOString()
+            };
+            isReceiptModalOpen.value = true;
         }
     });
 };
@@ -705,5 +729,99 @@ onMounted(() => {
                 </form>
             </div>
         </div>
+        <!-- MODAL: Receipt & Print -->
+        <div v-if="isReceiptModalOpen && completedPaymentData" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-verge-canvas-black/50 backdrop-blur-xs print:static print:bg-transparent print:p-0 print:block">
+            <!-- Modal Container (Hidden in print except receipt) -->
+            <div class="bg-verge-canvas-white w-full max-w-sm rounded-sm border-2 border-verge-text-primary shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] overflow-hidden print:border-none print:shadow-none print:max-w-full">
+                <!-- Header (Hidden in print) -->
+                <div class="p-4 border-b-2 border-verge-text-primary flex justify-between items-center bg-verge-surface-light print:hidden">
+                    <h2 class="font-display font-bold text-lg uppercase tracking-tight">Pembayaran Sukses</h2>
+                    <button @click="isReceiptModalOpen = false" class="text-verge-text-muted hover:text-verge-text-primary transition-colors">
+                        <X class="w-5 h-5" />
+                    </button>
+                </div>
+
+                <!-- Receipt Body (Printable Area) -->
+                <div id="printable-receipt" class="p-6 bg-white text-black print:p-0">
+                    <div class="text-center border-b-2 border-dashed border-gray-400 pb-4 mb-4">
+                        <h3 class="font-display font-bold text-2xl uppercase tracking-widest">VITKA FUTSAL</h3>
+                        <p class="font-mono text-[10px] text-gray-500 mt-1 uppercase">Official Payment Receipt</p>
+                        <p class="font-mono text-[10px] font-bold mt-2 border border-gray-300 inline-block px-2 py-1 bg-gray-50">
+                            {{ completedPaymentData.booking_number }}
+                        </p>
+                    </div>
+
+                    <div class="space-y-3 font-mono text-xs mb-6">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Tanggal:</span>
+                            <span class="font-bold">{{ formatDate(completedPaymentData.confirmed_at) }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Pelanggan:</span>
+                            <span class="font-bold">{{ completedPaymentData.customer_name }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Lapangan:</span>
+                            <span class="font-bold">{{ completedPaymentData.court_name }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Jadwal:</span>
+                            <span class="font-bold">{{ completedPaymentData.date }} ({{ completedPaymentData.start_time.slice(0, 5) }} - {{ completedPaymentData.end_time.slice(0, 5) }})</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Metode Bayar:</span>
+                            <span class="font-bold uppercase">{{ completedPaymentData.payment_method }}</span>
+                        </div>
+                    </div>
+
+                    <div class="border-t-2 border-dashed border-gray-400 pt-4 mb-6">
+                        <div class="flex justify-between items-end">
+                            <span class="font-mono text-xs text-gray-500 uppercase">Total Lunas</span>
+                            <span class="font-display text-2xl font-bold">{{ formatPrice(completedPaymentData.total_price) }}</span>
+                        </div>
+                    </div>
+
+                    <div class="text-center font-mono text-[9px] text-gray-500">
+                        <p>Terima kasih telah bermain di Vitka Futsal!</p>
+                        <p>Simpan struk ini sebagai bukti pembayaran yang sah.</p>
+                    </div>
+                </div>
+
+                <!-- Footer Actions (Hidden in print) -->
+                <div class="p-4 bg-verge-surface-light border-t-2 border-verge-text-primary flex justify-end gap-3 print:hidden">
+                    <button type="button" @click="isReceiptModalOpen = false" class="px-4 py-2 border-2 border-verge-text-primary bg-verge-canvas-white hover:bg-gray-50 font-mono text-xs uppercase font-bold text-verge-text-primary transition-colors">
+                        Tutup
+                    </button>
+                    <button type="button" @click="printReceipt" class="px-4 py-2 bg-verge-ultraviolet hover:bg-verge-deep-link-blue text-verge-canvas-white font-mono text-xs uppercase font-bold border-2 border-verge-text-primary shadow-[2px_2px_0px_0px_rgba(19,19,19,1)] transition-all flex items-center gap-2">
+                        <Printer class="w-4 h-4" />
+                        Cetak Struk
+                    </button>
+                </div>
+            </div>
+        </div>
+
     </AdminLayout>
 </template>
+
+<style>
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #printable-receipt, #printable-receipt * {
+        visibility: visible;
+    }
+    #printable-receipt {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    /* Hide layout elements explicitly */
+    aside, header, nav {
+        display: none !important;
+    }
+}
+</style>
