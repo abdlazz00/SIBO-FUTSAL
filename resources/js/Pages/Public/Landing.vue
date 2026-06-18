@@ -200,7 +200,7 @@ onMounted(() => {
             
             <!-- Map Bento Box -->
             <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-4 rounded-lg shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] h-96 relative overflow-hidden map-anim">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.0531580977464!2d103.9782522!3d1.1111666!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d98bc61bc5b5eb%3A0x39a149c4c47bb61c!2sVitka%20Futsal!5e0!3m2!1sid!2sid!4v1718630000000!5m2!1sid!2sid" class="w-full h-full border-0 rounded-sm" allowfullscreen="true" loading="lazy"></iframe>
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4521.9052041076675!2d103.978525716913!3d1.1110437001833355!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d98b8dfaccab27%3A0xa988646eb2338a7f!2sVitka%20Futsal%20Tiban!5e1!3m2!1sid!2sid!4v1781756234129!5m2!1sid!2sid" class="w-full h-full border-0 rounded-sm" allowfullscreen="true" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
         </section>
     </PublicLayout>
