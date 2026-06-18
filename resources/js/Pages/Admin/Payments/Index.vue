@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import Pagination from '@/Components/Pagination.vue';
+import gsap from 'gsap';
 import { 
     Search, Calendar, CreditCard, DollarSign, Download, 
     RefreshCw, CheckCircle, AlertTriangle, X, Wallet, ArrowRight, User, Clock
@@ -61,7 +63,18 @@ interface Summary {
 }
 
 const props = defineProps<{
-    payments: Payment[];
+    payments: {
+        data: Payment[];
+        current_page: number;
+        last_page: number;
+        from: number | null;
+        to: number | null;
+        total: number;
+        per_page: number;
+        links: { url: string | null; label: string; active: boolean }[];
+        prev_page_url: string | null;
+        next_page_url: string | null;
+    };
     unpaidBookings: Booking[];
     summary: Summary;
     filters: {
@@ -203,6 +216,59 @@ const formatBookingDate = (dateStr: string) => {
         year: 'numeric'
     });
 };
+
+// ─── ANIMATION ───────────────────────────────────────────────────────────────
+
+// Counter refs for stat cards
+const animatedToday = ref(0);
+const animatedMonth = ref(0);
+const animatedTotal = ref(0);
+const animatedRefund = ref(0);
+
+const animateCounter = (refVal: { value: number }, target: number, delay = 0) => {
+    const obj = { val: 0 };
+    gsap.to(obj, {
+        val: target,
+        duration: 1.4,
+        delay,
+        ease: 'power2.out',
+        onUpdate: () => { refVal.value = Math.round(obj.val); }
+    });
+};
+
+const formatCounter = (val: number) => {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0
+    }).format(val);
+};
+
+onMounted(() => {
+    // 1. Entrance stagger for all sections
+    const sections = document.querySelectorAll('.anim-section');
+    gsap.fromTo(sections,
+        { y: 28, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, stagger: 0.09, ease: 'power3.out', delay: 0.05 }
+    );
+
+    // 2. Counter animations
+    animateCounter(animatedToday, Number(props.summary.today_revenue), 0.2);
+    animateCounter(animatedMonth, Number(props.summary.this_month_revenue), 0.33);
+    animateCounter(animatedTotal, Number(props.summary.total_revenue), 0.46);
+    animateCounter(animatedRefund, Number(props.summary.total_refunded), 0.59);
+
+    // 3. Hover lift effects on stat cards
+    const statCards = document.querySelectorAll('.stat-card-hover');
+    statCards.forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            gsap.to(card, { y: -4, boxShadow: '6px 10px 0px 0px rgba(19,19,19,1)', duration: 0.2, ease: 'power2.out' });
+        });
+        card.addEventListener('mouseleave', () => {
+            gsap.to(card, { y: 0, boxShadow: '4px 4px 0px 0px rgba(19,19,19,1)', duration: 0.2, ease: 'power2.out' });
+        });
+    });
+});
 </script>
 
 <template>
@@ -211,7 +277,7 @@ const formatBookingDate = (dateStr: string) => {
     <AdminLayout>
         <div class="space-y-6">
             <!-- Header Card -->
-            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-6 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="anim-section bg-verge-canvas-white border-2 border-verge-text-primary p-6 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-verge-ultraviolet">Keuangan Lapangan</span>
                     <h1 class="text-3xl font-display font-bold uppercase mt-1">Transaksi & Pembayaran</h1>
@@ -226,40 +292,40 @@ const formatBookingDate = (dateStr: string) => {
             </div>
 
             <!-- Bento Stats Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+            <div class="anim-section grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="stat-card-hover bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 cursor-default">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Pendapatan Hari Ini</span>
                         <DollarSign class="w-4 h-4 text-verge-ultraviolet" />
                     </div>
-                    <span class="text-2xl font-display font-bold text-verge-text-primary mt-2">{{ formatPrice(summary.today_revenue) }}</span>
+                    <span class="text-2xl font-display font-bold text-verge-text-primary mt-2">{{ formatCounter(animatedToday) }}</span>
                     <span class="text-[9px] font-mono text-green-600 mt-1">Pendapatan bersih hari ini</span>
                 </div>
 
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                <div class="stat-card-hover bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 cursor-default">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Pendapatan Bulan Ini</span>
                         <Wallet class="w-4 h-4 text-verge-ultraviolet" />
                     </div>
-                    <span class="text-2xl font-display font-bold text-verge-text-primary mt-2">{{ formatPrice(summary.this_month_revenue) }}</span>
+                    <span class="text-2xl font-display font-bold text-verge-text-primary mt-2">{{ formatCounter(animatedMonth) }}</span>
                     <span class="text-[9px] font-mono text-verge-text-muted mt-1">Akumulasi bulan berjalan</span>
                 </div>
 
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                <div class="stat-card-hover bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 cursor-default">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Total Pendapatan (Filter)</span>
                         <CheckCircle class="w-4 h-4 text-green-600" />
                     </div>
-                    <span class="text-2xl font-display font-bold text-green-600 mt-2">{{ formatPrice(summary.total_revenue) }}</span>
+                    <span class="text-2xl font-display font-bold text-green-600 mt-2">{{ formatCounter(animatedTotal) }}</span>
                     <span class="text-[9px] font-mono text-verge-text-muted mt-1">Setelah dikurangi refund filter</span>
                 </div>
 
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                <div class="stat-card-hover bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 cursor-default">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Total Refund (Filter)</span>
                         <RefreshCw class="w-4 h-4 text-red-600" />
                     </div>
-                    <span class="text-2xl font-display font-bold text-red-600 mt-2">{{ formatPrice(summary.total_refunded) }}</span>
+                    <span class="text-2xl font-display font-bold text-red-600 mt-2">{{ formatCounter(animatedRefund) }}</span>
                     <span class="text-[9px] font-mono text-verge-text-muted mt-1">Uang dikembalikan</span>
                 </div>
             </div>
@@ -275,7 +341,7 @@ const formatBookingDate = (dateStr: string) => {
                             : 'border-transparent text-verge-text-muted hover:text-verge-text-primary'
                     ]"
                 >
-                    Daftar Transaksi ({{ payments.length }})
+                    Daftar Transaksi ({{ payments.total }})
                 </button>
                 <button 
                     @click="activeTab = 'unpaid'"
@@ -291,7 +357,7 @@ const formatBookingDate = (dateStr: string) => {
             </div>
 
             <!-- TAB 1: Daftar Transaksi -->
-            <div v-if="activeTab === 'transactions'" class="space-y-6">
+            <div v-if="activeTab === 'transactions'" class="anim-section space-y-6">
                 <!-- Filters -->
                 <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-4 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col gap-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -354,12 +420,12 @@ const formatBookingDate = (dateStr: string) => {
                                 </tr>
                             </thead>
                             <tbody class="divide-y border-verge-text-primary/10 text-xs">
-                                <tr v-if="payments.length === 0">
+                                <tr v-if="payments.data.length === 0">
                                     <td colspan="8" class="py-8 px-4 text-center font-mono text-verge-text-muted">
                                         Tidak ditemukan transaksi pembayaran yang sesuai.
                                     </td>
                                 </tr>
-                                <tr v-for="payment in payments" :key="payment.id" class="hover:bg-verge-surface-light/50 transition-colors">
+                                <tr v-for="payment in payments.data" :key="payment.id" class="hover:bg-verge-surface-light/50 transition-colors">
                                     <td class="py-3.5 px-4 font-mono font-bold text-verge-ultraviolet">
                                         {{ payment.booking?.booking_number }}
                                     </td>
@@ -418,11 +484,15 @@ const formatBookingDate = (dateStr: string) => {
                             </tbody>
                         </table>
                     </div>
+                    <!-- Pagination -->
+                    <div class="px-4 pb-4">
+                        <Pagination :paginator="payments" />
+                    </div>
                 </div>
             </div>
 
             <!-- TAB 2: Menunggu Pembayaran -->
-            <div v-if="activeTab === 'unpaid'" class="space-y-6">
+            <div v-if="activeTab === 'unpaid'" class="anim-section space-y-6">
                 <div class="bg-verge-canvas-white border-2 border-verge-text-primary rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">

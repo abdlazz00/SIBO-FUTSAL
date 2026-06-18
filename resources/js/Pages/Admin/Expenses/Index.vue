@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
+import Pagination from '@/Components/Pagination.vue';
+import gsap from 'gsap';
 import { 
     Plus, Search, Calendar, DollarSign, Edit, Trash2, X, AlertTriangle, Lightbulb, Users, Tag
 } from 'lucide-vue-next';
@@ -32,7 +34,18 @@ interface Summary {
 }
 
 const props = defineProps<{
-    expenses: Expense[];
+    expenses: {
+        data: Expense[];
+        current_page: number;
+        last_page: number;
+        from: number | null;
+        to: number | null;
+        total: number;
+        per_page: number;
+        links: { url: string | null; label: string; active: boolean }[];
+        prev_page_url: string | null;
+        next_page_url: string | null;
+    };
     summary: Summary;
     filters: {
         search?: string;
@@ -152,6 +165,60 @@ const formatDate = (dateStr: string) => {
         year: 'numeric'
     });
 };
+
+// ─── ANIMATION ────────────────────────────────────────────────────────────────
+
+const animatedTotal = ref(0);
+const animatedUtilities = ref(0);
+const animatedMaintenance = ref(0);
+const animatedSalaries = ref(0);
+const animatedOther = ref(0);
+
+const animateCounter = (refVal: { value: number }, target: number, delay = 0) => {
+    const obj = { val: 0 };
+    gsap.to(obj, {
+        val: target,
+        duration: 1.4,
+        delay,
+        ease: 'power2.out',
+        onUpdate: () => { refVal.value = Math.round(obj.val); }
+    });
+};
+
+const formatCounter = (val: number) => {
+    return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0
+    }).format(val);
+};
+
+onMounted(() => {
+    // 1. Entrance stagger
+    const sections = document.querySelectorAll('.anim-section');
+    gsap.fromTo(sections,
+        { y: 28, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, stagger: 0.09, ease: 'power3.out', delay: 0.05 }
+    );
+
+    // 2. Counter animations for 5 stat cards
+    animateCounter(animatedTotal, Number(props.summary.total_expense), 0.2);
+    animateCounter(animatedUtilities, Number(props.summary.by_category.utilities), 0.33);
+    animateCounter(animatedMaintenance, Number(props.summary.by_category.maintenance), 0.46);
+    animateCounter(animatedSalaries, Number(props.summary.by_category.salaries), 0.59);
+    animateCounter(animatedOther, Number(props.summary.by_category.other), 0.72);
+
+    // 3. Hover lift effects
+    const statCards = document.querySelectorAll('.stat-card-hover');
+    statCards.forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            gsap.to(card, { y: -4, boxShadow: '6px 10px 0px 0px rgba(19,19,19,1)', duration: 0.2, ease: 'power2.out' });
+        });
+        card.addEventListener('mouseleave', () => {
+            gsap.to(card, { y: 0, boxShadow: '4px 4px 0px 0px rgba(19,19,19,1)', duration: 0.2, ease: 'power2.out' });
+        });
+    });
+});
 </script>
 
 <template>
@@ -160,7 +227,7 @@ const formatDate = (dateStr: string) => {
     <AdminLayout>
         <div class="space-y-6">
             <!-- Header Card -->
-            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-6 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="anim-section bg-verge-canvas-white border-2 border-verge-text-primary p-6 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-verge-ultraviolet">Operasional Lapangan</span>
                     <h1 class="text-3xl font-display font-bold uppercase mt-1">Pengeluaran Operasional</h1>
@@ -175,60 +242,60 @@ const formatDate = (dateStr: string) => {
             </div>
 
             <!-- Bento Category Summary Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div class="anim-section grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                 <!-- Total -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 lg:col-span-1">
+                <div class="stat-card-hover bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 lg:col-span-1 cursor-default">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Total Biaya (Filter)</span>
                         <DollarSign class="w-4 h-4 text-verge-ultraviolet" />
                     </div>
-                    <span class="text-xl font-display font-bold mt-2 text-verge-ultraviolet">{{ formatPrice(summary.total_expense) }}</span>
+                    <span class="text-xl font-display font-bold mt-2 text-verge-ultraviolet">{{ formatCounter(animatedTotal) }}</span>
                     <span class="text-[9px] font-mono text-verge-text-muted mt-1">Jumlah seluruh pengeluaran</span>
                 </div>
 
                 <!-- Utilities -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                <div class="stat-card-hover bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 cursor-default">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Listrik / Air</span>
                         <Lightbulb class="w-4 h-4 text-amber-500" />
                     </div>
-                    <span class="text-lg font-display font-bold mt-2">{{ formatPrice(summary.by_category.utilities) }}</span>
+                    <span class="text-lg font-display font-bold mt-2">{{ formatCounter(animatedUtilities) }}</span>
                     <span class="text-[9px] font-mono text-verge-text-muted mt-1">Utilitas rutin bulanan</span>
                 </div>
 
                 <!-- Maintenance -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                <div class="stat-card-hover bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 cursor-default">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Perbaikan</span>
                         <Tag class="w-4 h-4 text-blue-500" />
                     </div>
-                    <span class="text-lg font-display font-bold mt-2">{{ formatPrice(summary.by_category.maintenance) }}</span>
+                    <span class="text-lg font-display font-bold mt-2">{{ formatCounter(animatedMaintenance) }}</span>
                     <span class="text-[9px] font-mono text-verge-text-muted mt-1">Sarana prasarana</span>
                 </div>
 
                 <!-- Salaries -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                <div class="stat-card-hover bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 cursor-default">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Gaji Staf</span>
                         <Users class="w-4 h-4 text-green-500" />
                     </div>
-                    <span class="text-lg font-display font-bold mt-2">{{ formatPrice(summary.by_category.salaries) }}</span>
+                    <span class="text-lg font-display font-bold mt-2">{{ formatCounter(animatedSalaries) }}</span>
                     <span class="text-[9px] font-mono text-verge-text-muted mt-1">Staf & Kebersihan</span>
                 </div>
 
                 <!-- Other -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                <div class="stat-card-hover bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 cursor-default">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Lain-Lain</span>
                         <Tag class="w-4 h-4 text-purple-500" />
                     </div>
-                    <span class="text-lg font-display font-bold mt-2">{{ formatPrice(summary.by_category.other) }}</span>
+                    <span class="text-lg font-display font-bold mt-2">{{ formatCounter(animatedOther) }}</span>
                     <span class="text-[9px] font-mono text-verge-text-muted mt-1">Kebutuhan tak terduga</span>
                 </div>
             </div>
 
             <!-- Filters -->
-            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-4 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="anim-section bg-verge-canvas-white border-2 border-verge-text-primary p-4 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <!-- Search input -->
                 <div class="relative flex-1">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-verge-text-muted">
@@ -262,7 +329,7 @@ const formatDate = (dateStr: string) => {
             </div>
 
             <!-- Expense List Table -->
-            <div class="bg-verge-canvas-white border-2 border-verge-text-primary rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] overflow-hidden">
+            <div class="anim-section bg-verge-canvas-white border-2 border-verge-text-primary rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
@@ -276,12 +343,12 @@ const formatDate = (dateStr: string) => {
                             </tr>
                         </thead>
                         <tbody class="divide-y border-verge-text-primary/10 text-xs">
-                            <tr v-if="expenses.length === 0">
+                            <tr v-if="expenses.data.length === 0">
                                 <td colspan="6" class="py-8 px-4 text-center font-mono text-verge-text-muted">
                                     Belum ada data pengeluaran operasional yang dicatat.
                                 </td>
                             </tr>
-                            <tr v-for="expense in expenses" :key="expense.id" class="hover:bg-verge-surface-light/50 transition-colors">
+                            <tr v-for="expense in expenses.data" :key="expense.id" class="hover:bg-verge-surface-light/50 transition-colors">
                                 <td class="py-3.5 px-4 font-mono font-bold">
                                     {{ formatDate(expense.expense_date) }}
                                 </td>
@@ -320,6 +387,10 @@ const formatDate = (dateStr: string) => {
                             </tr>
                         </tbody>
                     </table>
+                </div>
+                <!-- Pagination -->
+                <div class="px-4 pb-4">
+                    <Pagination :paginator="expenses" />
                 </div>
             </div>
         </div>

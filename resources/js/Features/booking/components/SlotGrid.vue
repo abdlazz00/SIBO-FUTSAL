@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { watch, nextTick } from 'vue';
 import { Clock, Check } from 'lucide-vue-next';
+import gsap from 'gsap';
 
 interface Slot {
     start_time: string;
@@ -39,6 +41,17 @@ const selectSlot = (slot: Slot) => {
 const isSelected = (slot: Slot) => {
     return props.selectedSlot && props.selectedSlot.start_time === slot.start_time;
 };
+
+watch(() => props.slots, (newSlots) => {
+    if (newSlots && newSlots.length > 0) {
+        nextTick(() => {
+            gsap.fromTo('.slot-btn',
+                { scale: 0.92, opacity: 0, y: 10 },
+                { scale: 1, opacity: 1, y: 0, duration: 0.4, stagger: 0.02, ease: 'power2.out' }
+            );
+        });
+    }
+}, { immediate: true });
 </script>
 
 <template>
@@ -78,7 +91,7 @@ const isSelected = (slot: Slot) => {
                 @click="selectSlot(slot)"
                 :disabled="slot.status === 'booked'"
                 :class="[
-                    'p-4 border-2 rounded-md font-mono text-left flex flex-col justify-between h-24 transition-all relative overflow-hidden group shadow-[2px_2px_0px_0px_rgba(19,19,19,1)]',
+                    'p-4 border-2 rounded-md font-mono text-left flex flex-col justify-between h-24 transition-all relative overflow-hidden group shadow-[2px_2px_0px_0px_rgba(19,19,19,1)] slot-btn',
                     slot.status === 'booked' 
                         ? 'bg-red-50/50 border-red-200 text-red-400 cursor-not-allowed shadow-none' 
                         : isSelected(slot)

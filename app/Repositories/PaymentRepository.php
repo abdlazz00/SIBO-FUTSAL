@@ -42,7 +42,7 @@ class PaymentRepository implements PaymentRepositoryInterface
             $query->whereDate('created_at', '<=', $filters['end_date']);
         }
 
-        return $query->orderBy('created_at', 'desc')->get();
+        return $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
     }
 
     public function findById(int $id): Payment

@@ -3,7 +3,8 @@ import { ref, computed, onMounted } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { 
     LayoutDashboard, Calendar, DollarSign, Dumbbell, 
-    Settings, LogOut, Bell, Menu, X, Shield, Users, FileText, CheckCircle, AlertTriangle
+    Settings, LogOut, Bell, Menu, X, Shield, Users, FileText, CheckCircle, AlertTriangle,
+    BarChart3
 } from 'lucide-vue-next';
 import axios from 'axios';
 
@@ -51,14 +52,14 @@ const toggleSidebar = () => {
     isSidebarOpen.value = !isSidebarOpen.value;
 };
 
-const menuItems = [
-    { name: 'Dashboard', route: 'admin.dashboard', icon: LayoutDashboard },
+const menuItems = computed(() => [
+    { name: 'Dashboard', route: user.role === 'owner' ? 'owner.dashboard' : 'admin.dashboard', icon: LayoutDashboard },
     { name: 'Bookings', route: 'admin.bookings.index', icon: Calendar },
     { name: 'Courts', route: 'admin.courts.index', icon: Dumbbell },
     { name: 'Testimonials', route: 'admin.testimonials.index', icon: Users },
     { name: 'Payments', route: 'admin.payments.index', icon: DollarSign },
     { name: 'Expenses', route: 'admin.expenses.index', icon: FileText },
-];
+]);
 
 onMounted(() => {
     fetchNotifications();
@@ -175,7 +176,29 @@ onMounted(() => {
                     </div>
 
                     <!-- Owner-only menu extension -->
-                    <slot name="owner-menu"></slot>
+                    <div v-if="user.role === 'owner'" class="pt-4 mt-4 border-t border-verge-text-primary/10">
+                        <span class="px-4 text-[9px] font-mono text-verge-text-muted uppercase tracking-widest block mb-2 font-bold">Owner Features</span>
+                        
+                        <Link :href="route('owner.reports.index')" :class="[
+                            'flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-mono uppercase tracking-wider transition-all border border-transparent',
+                            route().current('owner.reports.index')
+                                ? 'bg-verge-ultraviolet text-verge-canvas-white font-bold border-verge-text-primary/20'
+                                : 'hover:bg-verge-surface-light hover:border-verge-text-primary/10 text-verge-text-muted hover:text-verge-text-primary'
+                        ]">
+                            <BarChart3 class="w-4.5 h-4.5" />
+                            <span>Financial Reports</span>
+                        </Link>
+
+                        <Link :href="route('owner.staff.index')" :class="[
+                            'flex items-center gap-3 px-4 py-3 rounded-sm text-xs font-mono uppercase tracking-wider transition-all border border-transparent',
+                            route().current('owner.staff.index')
+                                ? 'bg-verge-ultraviolet text-verge-canvas-white font-bold border-verge-text-primary/20'
+                                : 'hover:bg-verge-surface-light hover:border-verge-text-primary/10 text-verge-text-muted hover:text-verge-text-primary'
+                        ]">
+                            <Users class="w-4.5 h-4.5" />
+                            <span>Staff Management</span>
+                        </Link>
+                    </div>
                 </nav>
 
                 <!-- Footer info -->

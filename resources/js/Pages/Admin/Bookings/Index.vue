@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import BookingStatusBadge from '@/Features/booking/components/BookingStatusBadge.vue';
+import Pagination from '@/Components/Pagination.vue';
 import { Search, Calendar as CalendarIcon, Clock, User, Phone, Plus, X, Ban, CalendarDays, Loader } from 'lucide-vue-next';
 import axios from 'axios';
 
@@ -56,7 +57,18 @@ interface Slot {
 }
 
 const props = defineProps<{
-    bookings: Booking[];
+    bookings: {
+        data: Booking[];
+        current_page: number;
+        last_page: number;
+        from: number | null;
+        to: number | null;
+        total: number;
+        per_page: number;
+        links: { url: string | null; label: string; active: boolean }[];
+        prev_page_url: string | null;
+        next_page_url: string | null;
+    };
     courts: Court[];
     filters: {
         search?: string;
@@ -341,7 +353,7 @@ const formatDate = (dateStr: string) => {
 
             <!-- Bookings List Table -->
             <div class="bg-verge-canvas-white border-2 border-verge-text-primary rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] overflow-hidden">
-                <div v-if="bookings.length === 0" class="p-12 text-center text-xs font-mono text-verge-text-muted">
+                <div v-if="bookings.data.length === 0" class="p-12 text-center text-xs font-mono text-verge-text-muted">
                     Tidak ada pemesanan ditemukan.
                 </div>
                 <div v-else class="overflow-x-auto">
@@ -359,7 +371,7 @@ const formatDate = (dateStr: string) => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="booking in bookings" :key="booking.id" class="border-b border-verge-text-primary/10 hover:bg-verge-surface-light/30 transition-colors">
+                            <tr v-for="booking in bookings.data" :key="booking.id" class="border-b border-verge-text-primary/10 hover:bg-verge-surface-light/30 transition-colors">
                                 <td class="p-4 whitespace-nowrap font-bold text-verge-ultraviolet">{{ booking.booking_number }}</td>
                                 <td class="p-4 whitespace-nowrap">
                                     <div class="font-sans font-bold text-verge-text-primary text-xs">{{ booking.customer_name }}</div>
@@ -390,6 +402,10 @@ const formatDate = (dateStr: string) => {
                             </tr>
                         </tbody>
                     </table>
+                </div>
+                <!-- Pagination -->
+                <div class="px-4 pb-4">
+                    <Pagination :paginator="bookings" />
                 </div>
             </div>
         </div>

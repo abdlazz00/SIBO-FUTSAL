@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { onMounted } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
 import { Dumbbell, Star, MessageSquare, ArrowRight, CheckCircle2 } from 'lucide-vue-next';
+import gsap from 'gsap';
 
 interface Photo {
     id: number;
@@ -39,6 +41,32 @@ const formatPrice = (price: number) => {
         maximumFractionDigits: 0
     }).format(price);
 };
+
+onMounted(() => {
+    // 1. Hero animations
+    gsap.fromTo('.hero-anim', 
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, stagger: 0.15, ease: 'power3.out' }
+    );
+
+    // 2. Court bento cards animations
+    gsap.fromTo('.court-card',
+        { y: 40, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, stagger: 0.1, ease: 'power3.out', delay: 0.3 }
+    );
+
+    // 3. Testimonial cards animations
+    gsap.fromTo('.testimonial-card',
+        { y: 35, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, stagger: 0.1, ease: 'power3.out', delay: 0.5 }
+    );
+
+    // 4. Map element animation
+    gsap.fromTo('.map-anim',
+        { scale: 0.96, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 1, ease: 'power3.out', delay: 0.7 }
+    );
+});
 </script>
 
 <template>
@@ -48,20 +76,20 @@ const formatPrice = (price: number) => {
         <!-- Hero Section -->
         <section class="border-b-2 border-verge-text-primary bg-verge-surface-light/40 py-20 px-6 relative overflow-hidden">
             <div class="max-w-6xl mx-auto flex flex-col items-center text-center space-y-6 relative z-10">
-                <span class="bg-verge-ultraviolet text-verge-canvas-white font-mono text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-sm border border-verge-text-primary/10 shadow-[2px_2px_0px_0px_rgba(19,19,19,1)]">
+                <span class="bg-verge-ultraviolet text-verge-canvas-white font-mono text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-sm border border-verge-text-primary/10 shadow-[2px_2px_0px_0px_rgba(19,19,19,1)] hero-anim">
                     #1 Futsal Booking Batam
                 </span>
 
-                <h1 class="font-display text-5xl md:text-7xl font-bold uppercase tracking-tight text-verge-text-primary max-w-4xl leading-none">
+                <h1 class="font-display text-5xl md:text-7xl font-bold uppercase tracking-tight text-verge-text-primary max-w-4xl leading-none hero-anim">
                     SEWA LAPANGAN FUTSAL <span class="text-verge-ultraviolet">TANPA RIBET</span>
                 </h1>
 
-                <p class="font-sans text-sm md:text-base text-verge-text-muted max-w-xl leading-relaxed">
+                <p class="font-sans text-sm md:text-base text-verge-text-muted max-w-xl leading-relaxed hero-anim">
                     Sistem booking online mandiri 24/7. Cek jadwal kosong lapangan secara real-time, pesan langsung, dan nikmati fasilitas futsal premium kami.
                 </p>
 
                 <!-- CTA Buttons -->
-                <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md">
+                <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-md hero-anim">
                     <!-- Book Now Button -->
                     <Link :href="route('booking.create')" class="w-full sm:w-auto px-8 py-4 bg-verge-ultraviolet text-verge-canvas-white hover:bg-verge-deep-link-blue border-2 border-verge-text-primary font-mono text-xs uppercase font-bold rounded-sm shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex items-center justify-center gap-2 transition-all">
                         <span>Pesan Lapangan</span>
@@ -90,7 +118,7 @@ const formatPrice = (price: number) => {
 
             <!-- Courts Bento Grid -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div v-for="court in courts" :key="court.id" class="bg-verge-canvas-white border-2 border-verge-text-primary rounded-lg shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] overflow-hidden flex flex-col justify-between group h-full">
+                <div v-for="court in courts" :key="court.id" class="bg-verge-canvas-white border-2 border-verge-text-primary rounded-lg shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] overflow-hidden flex flex-col justify-between group h-full court-card">
                     <!-- Photo -->
                     <div class="h-48 bg-verge-surface-light border-b-2 border-verge-text-primary relative overflow-hidden flex items-center justify-center">
                         <img v-if="court.photos && court.photos.length > 0" :src="court.photos[0].path" :alt="court.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -143,7 +171,7 @@ const formatPrice = (price: number) => {
 
                 <!-- Testimonials Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div v-for="testimonial in testimonials" :key="testimonial.id" class="bg-verge-canvas-white border-2 border-verge-text-primary p-6 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between">
+                    <div v-for="testimonial in testimonials" :key="testimonial.id" class="bg-verge-canvas-white border-2 border-verge-text-primary p-6 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between testimonial-card">
                         <div>
                             <div class="flex items-center gap-0.5 text-amber-500 mb-3">
                                 <Star v-for="i in 5" :key="i" class="w-4 h-4" :class="i <= testimonial.rating ? 'fill-amber-500' : 'text-zinc-300'" />
@@ -171,8 +199,8 @@ const formatPrice = (price: number) => {
             </div>
             
             <!-- Map Bento Box -->
-            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-4 rounded-lg shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] h-96 relative overflow-hidden">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.05432123!2d104.0012345!3d1.1234567!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d98a2b3c4d5e6f%3A0x1234567890abcdef!2sVitka+Futsal!5e0!3m2!1sid!2sid!4v1234567890123" class="w-full h-full border-0 rounded-sm" allowfullscreen="true" loading="lazy"></iframe>
+            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-4 rounded-lg shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] h-96 relative overflow-hidden map-anim">
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.0531580977464!2d103.9782522!3d1.1111666!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d98bc61bc5b5eb%3A0x39a149c4c47bb61c!2sVitka%20Futsal!5e0!3m2!1sid!2sid!4v1718630000000!5m2!1sid!2sid" class="w-full h-full border-0 rounded-sm" allowfullscreen="true" loading="lazy"></iframe>
             </div>
         </section>
     </PublicLayout>

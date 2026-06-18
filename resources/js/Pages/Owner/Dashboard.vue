@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import OwnerLayout from '@/Layouts/OwnerLayout.vue';
 import { 
     TrendingUp, Calendar, DollarSign, Clock, Users, ArrowUpRight, 
     ArrowDownRight, BarChart3, ShieldAlert, Sparkles, ChevronRight
 } from 'lucide-vue-next';
+import gsap from 'gsap';
 
 interface Court {
     id: number;
@@ -96,6 +97,32 @@ const averageOccupancy = computed(() => {
     const sum = props.occupancyRates.reduce((acc, curr) => acc + curr.rate, 0);
     return Math.round(sum / props.occupancyRates.length);
 });
+
+onMounted(() => {
+    // 1. Reveal page title/header card
+    gsap.fromTo('.dash-header',
+        { y: -20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }
+    );
+
+    // 2. Reveal stats grid cards
+    gsap.fromTo('.stats-card',
+        { y: 25, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, stagger: 0.08, ease: 'power3.out', delay: 0.1 }
+    );
+
+    // 3. Reveal bento boxes
+    gsap.fromTo('.bento-card',
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.7, stagger: 0.1, ease: 'power3.out', delay: 0.25 }
+    );
+
+    // 4. Animate occupancy progress bar width using scaleX
+    gsap.fromTo('.occupancy-bar',
+        { scaleX: 0 },
+        { scaleX: 1, transformOrigin: 'left', duration: 1.2, ease: 'power2.out', delay: 0.45 }
+    );
+});
 </script>
 
 <template>
@@ -104,7 +131,7 @@ const averageOccupancy = computed(() => {
     <OwnerLayout>
         <div class="space-y-6">
             <!-- Header Bento Card -->
-            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-6 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-6 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col md:flex-row md:items-center justify-between gap-4 dash-header">
                 <div>
                     <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-verge-ultraviolet">Panel Pemilik (Owner)</span>
                     <h1 class="text-3xl font-display font-bold uppercase mt-1">Owner Dashboard</h1>
@@ -121,7 +148,7 @@ const averageOccupancy = computed(() => {
             <!-- Owner Monthly Cash Flow Stats -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- Revenue month -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex items-center justify-between">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex items-center justify-between stats-card">
                     <div>
                         <span class="text-[9px] font-mono text-verge-text-muted uppercase tracking-wider block">Omzet Bulan Ini</span>
                         <span class="text-2xl font-display font-bold text-green-600 block mt-1">{{ formatPrice(ownerStats.revenue_month) }}</span>
@@ -133,7 +160,7 @@ const averageOccupancy = computed(() => {
                 </div>
 
                 <!-- Expense month -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex items-center justify-between">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex items-center justify-between stats-card">
                     <div>
                         <span class="text-[9px] font-mono text-verge-text-muted uppercase tracking-wider block">Biaya Operasional</span>
                         <span class="text-2xl font-display font-bold text-red-600 block mt-1">{{ formatPrice(ownerStats.expense_month) }}</span>
@@ -145,7 +172,7 @@ const averageOccupancy = computed(() => {
                 </div>
 
                 <!-- Net Profit month -->
-                <div class="border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex items-center justify-between transition-colors",
+                <div class="border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex items-center justify-between transition-colors stats-card",
                     :class="[ownerStats.profit_month >= 0 ? 'bg-verge-jelly-mint/10 border-verge-text-primary' : 'bg-red-50 border-verge-text-primary']"
                 >
                     <div>
@@ -170,7 +197,7 @@ const averageOccupancy = computed(() => {
             <!-- Quick Access Navigation & Today's Summary Row -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Quick Navigation Box -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between bento-card">
                     <div>
                         <div class="border-b border-verge-text-primary/10 pb-2 mb-4">
                             <span class="text-[9px] font-mono uppercase font-bold text-verge-text-muted block">Direct Navigation</span>
@@ -202,7 +229,7 @@ const averageOccupancy = computed(() => {
                 </div>
 
                 <!-- Today's Admin Metrics Summary -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-2">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-2 bento-card">
                     <div class="border-b border-verge-text-primary/10 pb-2 mb-4">
                         <span class="text-[9px] font-mono uppercase font-bold text-verge-text-muted block">Today's Performance Overview</span>
                         <h3 class="font-display text-lg font-bold uppercase mt-0.5 font-bold">Status Aktivitas Lapangan Hari Ini</h3>
@@ -235,7 +262,7 @@ const averageOccupancy = computed(() => {
             <!-- Bento Row 3: Occupancy & Busiest Courts -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Occupancy Rates Progress Bars -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-1 flex flex-col justify-between">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-1 flex flex-col justify-between bento-card">
                     <div>
                         <div class="border-b border-verge-text-primary/10 pb-2 mb-4">
                             <span class="text-[9px] font-mono uppercase font-bold text-verge-text-muted block">Slot Utilization</span>
@@ -251,7 +278,7 @@ const averageOccupancy = computed(() => {
                                 <div class="h-3.5 bg-verge-surface-light border-2 border-verge-text-primary rounded-sm overflow-hidden flex">
                                     <div 
                                         :style="{ width: court.rate + '%' }" 
-                                        class="bg-verge-ultraviolet border-r-2 border-verge-text-primary transition-all duration-500"
+                                        class="bg-verge-ultraviolet border-r-2 border-verge-text-primary occupancy-bar"
                                     ></div>
                                 </div>
                             </div>
@@ -263,7 +290,7 @@ const averageOccupancy = computed(() => {
                 </div>
 
                 <!-- Recent Activity Table -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-2">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-2 bento-card">
                     <div class="flex items-center justify-between border-b border-verge-text-primary/10 pb-2 mb-4">
                         <div>
                             <span class="text-[9px] font-mono uppercase font-bold text-verge-text-muted block">Live Feed</span>

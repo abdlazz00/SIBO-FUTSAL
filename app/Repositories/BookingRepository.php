@@ -28,7 +28,7 @@ class BookingRepository implements BookingRepositoryInterface
             $query->whereDate('date', $filters['date']);
         }
 
-        return $query->orderBy('created_at', 'desc')->get();
+        return $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
     }
 
     public function findById(int $id): Booking

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { 
     Dumbbell, Calendar, DollarSign, Clock, CheckCircle, 
     TrendingUp, User, ArrowRight, BarChart3, Star, Sparkles
 } from 'lucide-vue-next';
+import gsap from 'gsap';
 
 interface Court {
     id: number;
@@ -95,6 +96,32 @@ const maxPeakCount = computed(() => {
     const counts = props.peakHours.map(p => p.count);
     return Math.max(...counts, 1);
 });
+
+onMounted(() => {
+    // 1. Reveal page title/header card
+    gsap.fromTo('.dash-header',
+        { y: -20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }
+    );
+
+    // 2. Reveal stats grid cards
+    gsap.fromTo('.stats-card',
+        { y: 25, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, stagger: 0.08, ease: 'power3.out', delay: 0.1 }
+    );
+
+    // 3. Reveal bento boxes
+    gsap.fromTo('.bento-card',
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.7, stagger: 0.1, ease: 'power3.out', delay: 0.25 }
+    );
+
+    // 4. Animate occupancy progress bar width using scaleX
+    gsap.fromTo('.occupancy-bar',
+        { scaleX: 0 },
+        { scaleX: 1, transformOrigin: 'left', duration: 1.2, ease: 'power2.out', delay: 0.45 }
+    );
+});
 </script>
 
 <template>
@@ -103,7 +130,7 @@ const maxPeakCount = computed(() => {
     <AdminLayout>
         <div class="space-y-6">
             <!-- Header Bento Card -->
-            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-6 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-6 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col md:flex-row md:items-center justify-between gap-4 dash-header">
                 <div>
                     <span class="text-[10px] font-mono font-bold uppercase tracking-widest text-verge-ultraviolet">Panel Administrasi</span>
                     <h1 class="text-3xl font-display font-bold uppercase mt-1">Admin Dashboard</h1>
@@ -120,7 +147,7 @@ const maxPeakCount = computed(() => {
             <!-- Stats Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <!-- Bookings Today -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 stats-card">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Booking Hari Ini</span>
                         <Calendar class="w-4 h-4 text-verge-ultraviolet" />
@@ -130,7 +157,7 @@ const maxPeakCount = computed(() => {
                 </div>
 
                 <!-- Occupancy Rate -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 stats-card">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Rata-rata Okupansi</span>
                         <TrendingUp class="w-4 h-4 text-verge-ultraviolet" />
@@ -140,7 +167,7 @@ const maxPeakCount = computed(() => {
                 </div>
 
                 <!-- Unpaid Bookings -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 stats-card">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Menunggu Pembayaran</span>
                         <Clock class="w-4 h-4 text-amber-600" />
@@ -150,7 +177,7 @@ const maxPeakCount = computed(() => {
                 </div>
 
                 <!-- Revenue Today -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] flex flex-col justify-between h-32 stats-card">
                     <div class="flex items-center justify-between">
                         <span class="text-[10px] font-mono text-verge-text-muted uppercase tracking-wider">Pendapatan Hari Ini</span>
                         <DollarSign class="w-4 h-4 text-green-600" />
@@ -163,7 +190,7 @@ const maxPeakCount = computed(() => {
             <!-- Bento Row 1: Occupancy Rates & Peak Hours -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Occupancy Rates Progress Bars -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-1 flex flex-col justify-between">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-1 flex flex-col justify-between bento-card">
                     <div>
                         <div class="border-b border-verge-text-primary/10 pb-2 mb-4">
                             <span class="text-[9px] font-mono uppercase font-bold text-verge-text-muted block">Slot Utilization</span>
@@ -179,7 +206,7 @@ const maxPeakCount = computed(() => {
                                 <div class="h-3.5 bg-verge-surface-light border-2 border-verge-text-primary rounded-sm overflow-hidden flex">
                                     <div 
                                         :style="{ width: court.rate + '%' }" 
-                                        class="bg-verge-ultraviolet border-r-2 border-verge-text-primary transition-all duration-500"
+                                        class="bg-verge-ultraviolet border-r-2 border-verge-text-primary occupancy-bar"
                                         :class="{ 'bg-verge-jelly-mint': court.rate >= 80 }"
                                     ></div>
                                 </div>
@@ -192,7 +219,7 @@ const maxPeakCount = computed(() => {
                 </div>
 
                 <!-- Peak Hours Heatmap Chart -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-2">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-2 bento-card">
                     <div class="border-b border-verge-text-primary/10 pb-2 mb-4">
                         <span class="text-[9px] font-mono uppercase font-bold text-verge-text-muted block">Busiest Hours</span>
                         <h3 class="font-display text-lg font-bold uppercase mt-0.5">Frekuensi Jam Ramah Main</h3>
@@ -220,7 +247,7 @@ const maxPeakCount = computed(() => {
             <!-- Bento Row 2: Recent Bookings & Top Courts -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <!-- Recent Bookings Table -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-2">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-2 bento-card">
                     <div class="flex items-center justify-between border-b border-verge-text-primary/10 pb-2 mb-4">
                         <div>
                             <span class="text-[9px] font-mono uppercase font-bold text-verge-text-muted block">Real-time Activity</span>
@@ -278,7 +305,7 @@ const maxPeakCount = computed(() => {
                 </div>
 
                 <!-- Top Courts Leaderboard -->
-                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-1 flex flex-col justify-between">
+                <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-5 rounded-lg shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] lg:col-span-1 flex flex-col justify-between bento-card">
                     <div>
                         <div class="border-b border-verge-text-primary/10 pb-2 mb-4">
                             <span class="text-[9px] font-mono uppercase font-bold text-verge-text-muted block">Performance</span>

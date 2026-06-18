@@ -40,18 +40,41 @@ class ExpenseService
     }
 
     /**
-     * Get aggregate expense summaries
+     * Get aggregate expense summaries — queries all matching rows (not paginated)
+     * so totals are always accurate regardless of current page.
      */
     public function getExpenseSummary(array $filters = []): array
     {
-        $expenses = $this->expenseRepository->getAll($filters);
+        $query = Expense::query();
+
+        if (isset($filters['search']) && $filters['search'] !== '') {
+            $search = $filters['search'];
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', '%' . $search . '%')
+                  ->orWhere('category', 'like', '%' . $search . '%');
+            });
+        }
+
+        if (isset($filters['category']) && $filters['category'] !== '') {
+            $query->where('category', $filters['category']);
+        }
+
+        if (isset($filters['start_date']) && $filters['start_date'] !== '') {
+            $query->whereDate('expense_date', '>=', $filters['start_date']);
+        }
+
+        if (isset($filters['end_date']) && $filters['end_date'] !== '') {
+            $query->whereDate('expense_date', '<=', $filters['end_date']);
+        }
+
+        $expenses = $query->get();
 
         $totalExpense = 0;
         $byCategory = [
-            'utilities' => 0,
+            'utilities'   => 0,
             'maintenance' => 0,
-            'salaries' => 0,
-            'other' => 0
+            'salaries'    => 0,
+            'other'       => 0,
         ];
 
         foreach ($expenses as $expense) {
@@ -68,7 +91,7 @@ class ExpenseService
 
         return [
             'total_expense' => $totalExpense,
-            'by_category' => $byCategory
+            'by_category'   => $byCategory,
         ];
     }
 }

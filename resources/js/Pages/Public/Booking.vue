@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, watch, onMounted, nextTick } from 'vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { PageProps } from '@/types';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
@@ -8,6 +8,7 @@ import SlotGrid from '@/Features/booking/components/SlotGrid.vue';
 import BookingForm from '@/Features/booking/components/BookingForm.vue';
 import { Dumbbell, Calendar, Clock, ChevronRight, AlertTriangle, X } from 'lucide-vue-next';
 import axios from 'axios';
+import gsap from 'gsap';
 
 interface Photo {
     id: number;
@@ -112,6 +113,55 @@ const selectSlot = (slot: Slot) => {
 watch([selectedCourt, selectedDate], () => {
     fetchSlots();
 }, { immediate: true });
+
+onMounted(() => {
+    // 1. Title animations
+    gsap.fromTo('.booking-title-anim',
+        { y: -15, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out' }
+    );
+    // 2. Step animations
+    gsap.fromTo('.booking-step-anim',
+        { y: 25, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, stagger: 0.1, ease: 'power3.out' }
+    );
+});
+
+// Watch for success page changes to trigger GSAP reveal
+watch(() => page.props.flash?.success, (val) => {
+    if (val) {
+        nextTick(() => {
+            gsap.fromTo('.success-card',
+                { scale: 0.95, opacity: 0 },
+                { scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(1.5)' }
+            );
+            gsap.fromTo('.success-check',
+                { scale: 0, rotate: -30 },
+                { scale: 1, rotate: 0, duration: 0.5, ease: 'back.out(1.8)', delay: 0.2 }
+            );
+            gsap.fromTo('.success-item',
+                { y: 15, opacity: 0 },
+                { y: 0, opacity: 1, duration: 0.5, stagger: 0.08, ease: 'power2.out', delay: 0.3 }
+            );
+        });
+    }
+}, { immediate: true });
+
+// Watch for error modal visibility to trigger GSAP reveal
+watch(isErrorModalOpen, (val) => {
+    if (val) {
+        nextTick(() => {
+            gsap.fromTo('.error-modal-card',
+                { scale: 0.95, opacity: 0 },
+                { scale: 1, opacity: 1, duration: 0.45, ease: 'back.out(1.5)' }
+            );
+            gsap.fromTo('.error-modal-icon',
+                { scale: 0, y: -15 },
+                { scale: 1, y: 0, duration: 0.5, ease: 'back.out(2)', delay: 0.1 }
+            );
+        });
+    }
+});
 </script>
 
 <template>
@@ -120,18 +170,18 @@ watch([selectedCourt, selectedDate], () => {
     <PublicLayout>
         <!-- If Success Screen after Booking -->
         <div v-if="page.props.flash?.success" class="max-w-xl mx-auto py-16 px-6">
-            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-8 rounded-lg shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] text-center space-y-6">
-                <div class="w-16 h-16 bg-verge-jelly-mint text-verge-text-primary rounded-full flex items-center justify-center border-2 border-verge-text-primary mx-auto shadow-[2px_2px_0px_0px_rgba(19,19,19,1)]">
+            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-8 rounded-lg shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] text-center space-y-6 success-card">
+                <div class="w-16 h-16 bg-verge-jelly-mint text-verge-text-primary rounded-full flex items-center justify-center border-2 border-verge-text-primary mx-auto shadow-[2px_2px_0px_0px_rgba(19,19,19,1)] success-check">
                     <span class="font-bold text-2xl">✓</span>
                 </div>
 
-                <div class="space-y-2">
+                <div class="space-y-2 success-item">
                     <h2 class="font-display text-2xl font-bold uppercase tracking-tight">Booking Berhasil!</h2>
                     <p class="text-xs text-verge-text-muted">Simpan nomor booking di bawah untuk verifikasi pembayaran manual di lokasi atau pelacakan status.</p>
                 </div>
 
                 <!-- Booking Details Bento Box -->
-                <div class="bg-verge-surface-light border-2 border-verge-text-primary p-5 rounded-md font-mono text-xs text-left space-y-2">
+                <div class="bg-verge-surface-light border-2 border-verge-text-primary p-5 rounded-md font-mono text-xs text-left space-y-2 success-item">
                     <div class="flex justify-between border-b border-verge-text-primary/10 pb-1.5">
                         <span class="text-verge-text-muted">Nomor Booking:</span>
                         <span class="font-bold text-verge-ultraviolet text-sm">{{ page.props.flash.booking_number }}</span>
@@ -142,7 +192,7 @@ watch([selectedCourt, selectedDate], () => {
                     </div>
                 </div>
 
-                <div class="pt-4 flex flex-col gap-2">
+                <div class="pt-4 flex flex-col gap-2 success-item">
                     <Link :href="route('landing')" class="px-6 py-3 bg-verge-canvas-black text-verge-canvas-white hover:bg-verge-text-muted border border-verge-text-primary font-mono text-xs uppercase font-bold rounded-sm shadow-[2px_2px_0px_0px_rgba(19,19,19,1)] transition-colors block">
                         Kembali ke Beranda
                     </Link>
@@ -155,13 +205,13 @@ watch([selectedCourt, selectedDate], () => {
 
         <!-- Normal Booking Step Flow -->
         <div v-else class="max-w-6xl mx-auto py-12 px-6 space-y-8">
-            <div class="border-b border-verge-text-primary/10 pb-4">
+            <div class="border-b border-verge-text-primary/10 pb-4 booking-title-anim">
                 <span class="font-mono text-[9px] uppercase font-bold text-verge-ultraviolet tracking-widest">Sewa Mandiri</span>
                 <h1 class="font-display text-3xl md:text-4xl font-bold uppercase tracking-tight">Booking Online</h1>
             </div>
 
             <!-- Step 1: Court Selection -->
-            <div class="space-y-4">
+            <div class="space-y-4 booking-step-anim">
                 <h2 class="font-display text-xl font-bold uppercase flex items-center gap-2">
                     <span class="bg-verge-canvas-black text-verge-canvas-white w-6 h-6 rounded-full flex items-center justify-center font-mono text-xs shadow-[2px_2px_0px_0px_rgba(82,0,255,1)]">1</span>
                     <span>Pilih Lapangan</span>
@@ -193,7 +243,7 @@ watch([selectedCourt, selectedDate], () => {
             </div>
 
             <!-- Step 2: Date & Slots Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" v-if="selectedCourt">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 booking-step-anim" v-if="selectedCourt">
                 <!-- Datepicker Column -->
                 <div class="space-y-4">
                     <h2 class="font-display text-xl font-bold uppercase flex items-center gap-2">
@@ -228,7 +278,7 @@ watch([selectedCourt, selectedDate], () => {
             </div>
 
             <!-- Step 3: Booking Form (Checkout) -->
-            <div class="space-y-4" v-if="selectedCourt && selectedSlot">
+            <div class="space-y-4 booking-step-anim" v-if="selectedCourt && selectedSlot">
                 <h2 class="font-display text-xl font-bold uppercase flex items-center gap-2">
                     <span class="bg-verge-canvas-black text-verge-canvas-white w-6 h-6 rounded-full flex items-center justify-center font-mono text-xs shadow-[2px_2px_0px_0px_rgba(82,0,255,1)]">4</span>
                     <span>Lengkapi Data Pemesanan</span>
@@ -245,9 +295,9 @@ watch([selectedCourt, selectedDate], () => {
         <!-- ERROR/FAILURE POPUP MODAL -->
         <div v-if="isErrorModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-black/40" @click="isErrorModalOpen = false"></div>
-            <div class="bg-verge-canvas-white border-2 border-verge-text-primary rounded-lg shadow-[8px_8px_0px_0px_rgba(19,19,19,1)] w-full max-w-md relative z-10 overflow-hidden flex flex-col p-6 text-center space-y-6 animate-scale-up">
+            <div class="bg-verge-canvas-white border-2 border-verge-text-primary rounded-lg shadow-[8px_8px_0px_0px_rgba(19,19,19,1)] w-full max-w-md relative z-10 overflow-hidden flex flex-col p-6 text-center space-y-6 error-modal-card">
                 <!-- Large Cross Icon -->
-                <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center border-2 border-red-600 mx-auto shadow-[2px_2px_0px_0px_rgba(220,38,38,1)]">
+                <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center border-2 border-red-600 mx-auto shadow-[2px_2px_0px_0px_rgba(220,38,38,1)] error-modal-icon">
                     <X class="w-8 h-8 stroke-[3]" />
                 </div>
 
@@ -269,17 +319,5 @@ watch([selectedCourt, selectedDate], () => {
 </template>
 
 <style scoped>
-@keyframes scaleUp {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-.animate-scale-up {
-  animation: scaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
+/* No static keyframes needed, handled dynamically by GSAP */
 </style>

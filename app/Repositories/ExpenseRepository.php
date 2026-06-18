@@ -31,7 +31,7 @@ class ExpenseRepository implements ExpenseRepositoryInterface
             $query->whereDate('expense_date', '<=', $filters['end_date']);
         }
 
-        return $query->orderBy('expense_date', 'desc')->orderBy('created_at', 'desc')->get();
+        return $query->orderBy('expense_date', 'desc')->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
     }
 
     public function findById(int $id): Expense
