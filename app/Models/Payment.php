@@ -24,4 +24,9 @@ class Payment extends Model
     {
         return $this->belongsTo(User::class, 'confirmed_by');
     }
+
+    public function confirmed_by_user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by');
+    }
 }

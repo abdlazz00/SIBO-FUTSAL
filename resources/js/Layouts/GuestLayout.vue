@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { Sparkles, Trophy, Shield, Clock, Star } from 'lucide-vue-next';
+import { Sparkles, Trophy, Shield, Clock, Star, Sun, Moon } from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 import gsap from 'gsap';
+import { useTheme } from '@/Composables/useTheme';
+
+const { isDark, initTheme, toggleTheme } = useTheme();
 
 const leftPanelRef = ref<HTMLElement | null>(null);
 const formCardRef = ref<HTMLElement | null>(null);
 
 onMounted(() => {
+    initTheme();
     // Animate left panel elements staggered on mount
     if (leftPanelRef.value) {
         const children = leftPanelRef.value.querySelectorAll('.anim-item');
@@ -27,7 +31,14 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-verge-surface-light text-verge-text-primary">
+    <div class="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-verge-surface-light text-verge-text-primary relative">
+        <!-- Floating Theme Toggle (Top Right) -->
+        <div class="absolute top-4 right-4 z-50">
+            <button @click="toggleTheme" class="p-2 bg-verge-canvas-white hover:bg-verge-surface-light border border-verge-text-primary/10 rounded-sm transition-colors text-verge-text-primary flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(19,19,19,1)]" aria-label="Toggle Theme">
+                <Sun v-if="isDark" class="w-4 h-4 text-amber-500 animate-pulse" />
+                <Moon v-else class="w-4 h-4" />
+            </button>
+        </div>
         
         <!-- Left Side: Visual Brutalist Panel (Only visible on lg screens) -->
         <div class="hidden lg:flex flex-col justify-between p-12 bg-verge-canvas-black text-verge-canvas-white relative overflow-hidden border-r-4 border-verge-text-primary select-none">

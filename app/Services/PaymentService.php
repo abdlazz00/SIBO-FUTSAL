@@ -44,9 +44,9 @@ class PaymentService
     /**
      * Confirm booking payment
      */
-    public function confirmPayment(int $bookingId, string $method, int $adminId): Payment
+    public function confirmPayment(int $bookingId, string $method, int $adminId, float $cashReceived = 0.00, float $cashChange = 0.00): Payment
     {
-        return DB::transaction(function () use ($bookingId, $method, $adminId) {
+        return DB::transaction(function () use ($bookingId, $method, $adminId, $cashReceived, $cashChange) {
             $booking = $this->bookingRepository->findById($bookingId);
 
             if ($booking->status === 'cancelled') {
@@ -56,10 +56,16 @@ class PaymentService
             // Find existing or create new payment
             $payment = $this->paymentRepository->findByBookingId($bookingId);
 
+            // ponytail: handle cash change computation to guarantee data integrity
+            $finalCashReceived = $method === 'cash' ? $cashReceived : $booking->total_price;
+            $finalCashChange = $method === 'cash' ? max(0, $finalCashReceived - $booking->total_price) : 0.00;
+
             $paymentData = [
                 'booking_id' => $bookingId,
                 'payment_method' => $method,
                 'amount' => $booking->total_price,
+                'cash_received' => $finalCashReceived,
+                'cash_change' => $finalCashChange,
                 'confirmed_by' => $adminId,
                 'confirmed_at' => Carbon::now(),
             ];

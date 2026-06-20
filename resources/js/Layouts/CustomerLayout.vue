@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { LogOut, User as UserIcon, Calendar, History, LayoutDashboard } from 'lucide-vue-next';
+import { LogOut, User as UserIcon, Calendar, History, LayoutDashboard, Sun, Moon } from 'lucide-vue-next';
+import { useTheme } from '@/Composables/useTheme';
+
+const { isDark, initTheme, toggleTheme } = useTheme();
 
 const page = usePage();
 const user = page.props.auth.user;
 const showProfileDropdown = ref(false);
+
+onMounted(() => {
+    initTheme();
+});
 </script>
 
 <template>
@@ -28,6 +35,12 @@ const showProfileDropdown = ref(false);
             </div>
 
             <div class="flex items-center gap-4">
+                <!-- Dark Mode Toggle Button -->
+                <button @click="toggleTheme" class="p-2 hover:bg-verge-surface-light border border-verge-text-primary/10 rounded-sm transition-colors text-verge-text-primary flex items-center justify-center" aria-label="Toggle Theme">
+                    <Sun v-if="isDark" class="w-4 h-4 text-amber-500 animate-pulse" />
+                    <Moon v-else class="w-4 h-4" />
+                </button>
+
                 <!-- Profile Dropdown -->
                 <div class="relative" v-if="user">
                     <button @click="showProfileDropdown = !showProfileDropdown" class="flex items-center gap-2 p-1.5 hover:bg-verge-surface-light border border-verge-text-primary/10 rounded-sm transition-colors text-sm font-medium">

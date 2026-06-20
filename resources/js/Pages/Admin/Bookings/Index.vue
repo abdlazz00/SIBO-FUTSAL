@@ -297,6 +297,15 @@ const formatDate = (dateStr: string) => {
         dateStyle: 'medium'
     });
 };
+
+const exportCsv = () => {
+    const url = route('admin.bookings.export', {
+        search: searchInput.value,
+        status: statusInput.value,
+        date: dateInput.value
+    });
+    window.open(url, '_blank');
+};
 </script>
 
 <template>
@@ -312,6 +321,9 @@ const formatDate = (dateStr: string) => {
                     <p class="text-xs text-verge-text-muted mt-1">Kelola data sewa lapangan futsal, reschedule jadwal, pembatalan sewa, atau input pemesanan walk-in manual.</p>
                 </div>
                 <div class="flex gap-2">
+                    <button @click="exportCsv" class="flex items-center justify-center gap-2 px-5 py-3 bg-verge-canvas-white hover:bg-verge-surface-light border-2 border-verge-text-primary font-mono text-xs uppercase font-bold rounded-sm shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] transition-all">
+                        <span>Ekspor CSV</span>
+                    </button>
                     <button @click="openManualModal" class="flex items-center justify-center gap-1.5 px-4 py-3 bg-verge-ultraviolet text-verge-canvas-white hover:bg-verge-deep-link-blue border-2 border-verge-text-primary font-mono text-xs uppercase font-bold rounded-sm shadow-[4px_4px_0px_0px_rgba(19,19,19,1)] transition-all">
                         <Plus class="w-4 h-4" />
                         <span>Booking Manual</span>

@@ -30,6 +30,12 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $flash = $request->session()->get('flash') ?? [];
+        \Log::info('HandleInertiaRequests share flash data:', ['flash' => $flash, 'success' => $request->session()->get('success')]);
+        if (is_string($flash)) {
+            $flash = ['success' => $flash];
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -38,6 +44,14 @@ class HandleInertiaRequests extends Middleware
             'ziggy' => fn () => [
                 ...(new Ziggy)->toArray(),
                 'location' => $request->url(),
+            ],
+            'flash' => [
+                'success' => $request->session()->get('success') ?? ($flash['success'] ?? null),
+                'error' => $request->session()->get('error') ?? ($flash['error'] ?? null),
+                'info' => $request->session()->get('info') ?? ($flash['info'] ?? null),
+                'booking_number' => $request->session()->get('booking_number') ?? ($flash['booking_number'] ?? null),
+                'total_price' => $request->session()->get('total_price') ?? ($flash['total_price'] ?? null),
+                'confirmed_payment' => $request->session()->get('confirmed_payment') ?? ($flash['confirmed_payment'] ?? null),
             ],
         ];
     }

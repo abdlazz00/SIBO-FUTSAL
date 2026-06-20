@@ -42,6 +42,10 @@ class PaymentRepository implements PaymentRepositoryInterface
             $query->whereDate('created_at', '<=', $filters['end_date']);
         }
 
+        if (isset($filters['paginate']) && $filters['paginate'] === false) {
+            return $query->orderBy('created_at', 'desc')->get();
+        }
+
         return $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
     }
 

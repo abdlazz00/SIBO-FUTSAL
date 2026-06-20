@@ -50,3 +50,22 @@ body {
     margin: 0;
     -webkit-font-smoothing: antialiased;
 }
+
+/* ponytail: Inverted Brutalist Dark Mode CSS overrides */
+.dark {
+    --color-verge-canvas-white: #131313;
+    --color-verge-surface-light: #1c1c1e;
+    --color-verge-canvas-black: #ffffff;
+    --color-verge-text-primary: #ffffff;
+    --color-verge-text-muted: #a1a1aa;
+    --color-verge-border: #e4e4e7;
+    --color-verge-ultraviolet: #a78bfa;
+    --color-verge-deep-link-blue: #c4b5fd;
+
+    /* PrimeVue Dark Surface Overrides */
+    --p-surface-50: #1a1a1d;
+    --p-surface-200: #2d2d30;
+    --p-surface-300: #3f3f46;
+    --p-surface-400: #52525b;
+    --p-surface-500: #71717a;
+}

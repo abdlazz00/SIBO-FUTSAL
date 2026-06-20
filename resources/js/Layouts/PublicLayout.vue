@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
-import { Search } from 'lucide-vue-next';
+import { Search, Sun, Moon } from 'lucide-vue-next';
+import { useTheme } from '@/Composables/useTheme';
+
+const { isDark, initTheme, toggleTheme } = useTheme();
 
 const page = usePage();
 const user = page.props.auth.user;
+
+onMounted(() => {
+    initTheme();
+});
 </script>
 
 <template>
@@ -26,6 +33,12 @@ const user = page.props.auth.user;
             </div>
 
             <div class="flex items-center gap-3">
+                <!-- Dark Mode Toggle Button -->
+                <button @click="toggleTheme" class="p-2 hover:bg-verge-surface-light border border-verge-text-primary/10 rounded-sm transition-colors text-verge-text-primary flex items-center justify-center" aria-label="Toggle Theme">
+                    <Sun v-if="isDark" class="w-4 h-4 text-amber-500 animate-pulse" />
+                    <Moon v-else class="w-4 h-4" />
+                </button>
+
                 <div v-if="user" class="flex items-center gap-3">
                     <Link :href="route('dashboard')" class="px-4 py-2 border-2 border-verge-text-primary font-mono text-xs uppercase hover:bg-verge-surface-light rounded-sm transition-all shadow-[2px_2px_0px_0px_rgba(19,19,19,1)]">Dashboard</Link>
                 </div>

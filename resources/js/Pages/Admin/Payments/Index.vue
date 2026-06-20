@@ -48,6 +48,8 @@ interface Payment {
     confirmed_at: string | null;
     booking: Booking;
     confirmed_by_user: User | null;
+    cash_received: number | null;
+    cash_change: number | null;
 }
 
 interface Summary {
@@ -84,6 +86,12 @@ const props = defineProps<{
         start_date?: string;
         end_date?: string;
     };
+    flash: {
+        success?: string;
+        error?: string;
+        confirmed_payment?: any;
+    };
+    confirmedPayment?: any;
 }>();
 
 // Tabs state
@@ -125,12 +133,14 @@ const clearFilters = () => {
 const selectedBooking = ref<Booking | null>(null);
 const isConfirmModalOpen = ref(false);
 const confirmForm = useForm({
-    payment_method: 'cash'
+    payment_method: 'cash',
+    cash_received: 0
 });
 
 const openConfirmModal = (booking: Booking) => {
     selectedBooking.value = booking;
     confirmForm.payment_method = 'cash';
+    confirmForm.cash_received = booking.total_price;
     isConfirmModalOpen.value = true;
 };
 
@@ -149,27 +159,31 @@ const printReceipt = () => {
 
 const submitConfirmPayment = () => {
     if (!selectedBooking.value) return;
-    const currentBooking = { ...selectedBooking.value };
-    const selectedMethod = confirmForm.payment_method;
     
     confirmForm.post(route('admin.payments.confirm', selectedBooking.value.id), {
+        preserveState: true,
+        preserveScroll: true,
         onSuccess: () => {
             closeConfirmModal();
-            // Show receipt
-            completedPaymentData.value = {
-                booking_number: currentBooking.booking_number,
-                customer_name: currentBooking.customer_name,
-                court_name: currentBooking.court?.name ?? '-',
-                date: currentBooking.date,
-                start_time: currentBooking.start_time,
-                end_time: currentBooking.end_time,
-                total_price: currentBooking.total_price,
-                payment_method: selectedMethod,
-                confirmed_at: new Date().toISOString()
-            };
-            isReceiptModalOpen.value = true;
         }
     });
+};
+
+const openReceiptModalFromPayment = (payment: Payment) => {
+    completedPaymentData.value = {
+        booking_number: payment.booking?.booking_number ?? '-',
+        customer_name: payment.booking?.customer_name ?? '-',
+        court_name: payment.booking?.court?.name ?? '-',
+        date: payment.booking?.date ?? '-',
+        start_time: payment.booking?.start_time ?? '00:00:00',
+        end_time: payment.booking?.end_time ?? '00:00:00',
+        total_price: payment.amount,
+        payment_method: payment.payment_method,
+        cash_received: payment.cash_received,
+        cash_change: payment.cash_change,
+        confirmed_at: payment.confirmed_at
+    };
+    isReceiptModalOpen.value = true;
 };
 
 // Refund Modal
@@ -241,6 +255,25 @@ const formatBookingDate = (dateStr: string) => {
     });
 };
 
+const formatBookingDateShort = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const cleanDate = dateStr.split(/[T ]/)[0];
+    const parts = cleanDate.split('-');
+    if (parts.length === 3) {
+        const [year, month, day] = parts;
+        return `${day}/${month}/${year}`;
+    }
+    try {
+        const date = new Date(dateStr);
+        const d = String(date.getDate()).padStart(2, '0');
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const y = date.getFullYear();
+        return `${d}/${m}/${y}`;
+    } catch (e) {
+        return dateStr;
+    }
+};
+
 // ─── ANIMATION ───────────────────────────────────────────────────────────────
 
 // Counter refs for stat cards
@@ -267,6 +300,20 @@ const formatCounter = (val: number) => {
         maximumFractionDigits: 0
     }).format(val);
 };
+
+watch(() => props.confirmedPayment || props.flash?.confirmed_payment, (newPayment) => {
+    if (newPayment) {
+        completedPaymentData.value = newPayment;
+        isReceiptModalOpen.value = true;
+        
+        // Clear query parameter from the URL to prevent the modal from opening again on refresh
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('confirmed_booking')) {
+            url.searchParams.delete('confirmed_booking');
+            window.history.replaceState({}, '', url.pathname + url.search);
+        }
+    }
+}, { immediate: true });
 
 onMounted(() => {
     // 1. Entrance stagger for all sections
@@ -495,13 +542,21 @@ onMounted(() => {
                                     <td class="py-3.5 px-4 text-right">
                                         <div class="flex justify-end gap-2">
                                             <button 
+                                                v-if="payment.confirmed_at"
+                                                @click="openReceiptModalFromPayment(payment)"
+                                                class="px-2.5 py-1 bg-verge-canvas-white hover:bg-verge-surface-light text-verge-text-primary border border-verge-text-primary font-mono text-[10px] uppercase font-bold rounded-sm transition-colors flex items-center gap-1"
+                                            >
+                                                <Printer class="w-3 h-3" />
+                                                <span>Struk</span>
+                                            </button>
+                                            <button 
                                                 v-if="Number(payment.refund_amount) < Number(payment.amount)" 
                                                 @click="openRefundModal(payment)" 
                                                 class="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-600 border border-red-300 font-mono text-[10px] uppercase font-bold rounded-sm transition-colors"
                                             >
                                                 Refund
                                             </button>
-                                            <span v-else class="text-[10px] font-mono text-verge-text-muted italic">No Action</span>
+                                            <span v-if="!payment.confirmed_at && Number(payment.refund_amount) >= Number(payment.amount)" class="text-[10px] font-mono text-verge-text-muted italic">No Action</span>
                                         </div>
                                     </td>
                                 </tr>
@@ -646,6 +701,54 @@ onMounted(() => {
                         </div>
                     </div>
 
+                    <!-- Input Uang Diterima & Kembalian (Hanya jika metode Cash) -->
+                    <div v-if="confirmForm.payment_method === 'cash'" class="space-y-3 p-3 bg-verge-surface-light border-2 border-verge-text-primary rounded-md animate-fade-in">
+                        <div class="space-y-1">
+                            <label for="cash_received" class="font-mono text-[10px] uppercase font-bold text-verge-text-muted">Jumlah Uang Diterima (Rp)</label>
+                            <input 
+                                id="cash_received" 
+                                type="number" 
+                                v-model.number="confirmForm.cash_received" 
+                                required 
+                                :min="selectedBooking.total_price"
+                                class="w-full border-2 border-verge-text-primary p-2 py-1.5 rounded-sm font-mono text-xs focus:outline-none focus:border-verge-ultraviolet bg-white" 
+                            />
+                            <span v-if="confirmForm.errors.cash_received" class="text-[10px] font-mono text-red-600 block">{{ confirmForm.errors.cash_received }}</span>
+                        </div>
+
+                        <!-- Tombol Cepat Nominal -->
+                        <div class="space-y-1">
+                            <span class="font-mono text-[9px] uppercase font-bold text-verge-text-muted block">Nominal Cepat:</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button 
+                                    type="button" 
+                                    @click="confirmForm.cash_received = selectedBooking.total_price" 
+                                    class="px-2 py-1 bg-verge-canvas-white hover:bg-verge-surface-light border border-verge-text-primary font-mono text-[9px] uppercase font-bold rounded-xs transition-colors"
+                                >
+                                    Uang Pas
+                                </button>
+                                <button 
+                                    v-for="denom in [50000, 100000, 200000]" 
+                                    :key="denom"
+                                    type="button" 
+                                    v-show="denom >= selectedBooking.total_price"
+                                    @click="confirmForm.cash_received = denom" 
+                                    class="px-2 py-1 bg-verge-canvas-white hover:bg-verge-surface-light border border-verge-text-primary font-mono text-[9px] uppercase font-bold rounded-xs transition-colors"
+                                >
+                                    {{ formatPrice(denom) }}
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Info Kembalian -->
+                        <div class="flex justify-between items-center pt-2 border-t border-verge-text-primary/10 font-mono text-xs">
+                            <span class="text-verge-text-muted font-bold">Kembalian:</span>
+                            <span class="font-bold" :class="confirmForm.cash_received >= selectedBooking.total_price ? 'text-green-600' : 'text-red-600'">
+                                {{ formatPrice(Math.max(0, confirmForm.cash_received - selectedBooking.total_price)) }}
+                            </span>
+                        </div>
+                    </div>
+
                     <div class="pt-2 flex justify-end gap-3 font-mono text-xs uppercase font-bold">
                         <button type="button" @click="closeConfirmModal" class="px-4 py-2.5 border-2 border-verge-text-primary hover:bg-verge-surface-light rounded-sm">
                             Batal
@@ -766,7 +869,7 @@ onMounted(() => {
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-500">Jadwal:</span>
-                            <span class="font-bold">{{ completedPaymentData.date }} ({{ completedPaymentData.start_time.slice(0, 5) }} - {{ completedPaymentData.end_time.slice(0, 5) }})</span>
+                            <span class="font-bold">{{ formatBookingDateShort(completedPaymentData.date) }} ({{ completedPaymentData.start_time.slice(0, 5) }} - {{ completedPaymentData.end_time.slice(0, 5) }})</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-500">Metode Bayar:</span>
@@ -775,6 +878,14 @@ onMounted(() => {
                     </div>
 
                     <div class="border-t-2 border-dashed border-gray-400 pt-4 mb-6">
+                        <div v-if="completedPaymentData.payment_method === 'cash'" class="flex justify-between font-mono text-xs mb-2">
+                            <span class="text-gray-500 uppercase">Uang Diterima:</span>
+                            <span class="font-bold">{{ formatPrice(completedPaymentData.cash_received) }}</span>
+                        </div>
+                        <div v-if="completedPaymentData.payment_method === 'cash'" class="flex justify-between font-mono text-xs mb-3">
+                            <span class="text-gray-500 uppercase">Kembalian:</span>
+                            <span class="font-bold text-green-600">{{ formatPrice(completedPaymentData.cash_change) }}</span>
+                        </div>
                         <div class="flex justify-between items-end">
                             <span class="font-mono text-xs text-gray-500 uppercase">Total Lunas</span>
                             <span class="font-display text-2xl font-bold">{{ formatPrice(completedPaymentData.total_price) }}</span>
@@ -805,23 +916,60 @@ onMounted(() => {
 
 <style>
 @media print {
-    body * {
-        visibility: hidden;
-    }
-    #printable-receipt, #printable-receipt * {
-        visibility: visible;
-    }
-    #printable-receipt {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-    }
-    /* Hide layout elements explicitly */
-    aside, header, nav {
+    /* Hide all layout wrappers, headers, sidebars, page content, and other modals */
+    header, aside, nav, .print\:hidden, .space-y-6, .fixed.inset-0:not(.print\:block) {
         display: none !important;
+    }
+    
+    /* Reset background colors, heights, and scrollbars for layout parents to make sure there are no blank pages */
+    html, body, #app, .min-h-screen, main, .mx-auto.max-w-7xl {
+        background: white !important;
+        color: black !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        width: 100% !important;
+        overflow: visible !important;
+        display: block !important;
+    }
+
+    /* Reset the modal container position for standard page printing */
+    .fixed.inset-0.z-50.print\:block {
+        position: static !important;
+        display: block !important;
+        background: transparent !important;
+        backdrop-filter: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+    }
+
+    /* Reset the modal box border, shadow, and background */
+    .fixed.inset-0.z-50.print\:block > div {
+        border: none !important;
+        box-shadow: none !important;
+        background: white !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+    }
+
+    /* Print only the receipt */
+    #printable-receipt {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 10px !important;
+        background: white !important;
+        color: black !important;
+    }
+
+    #printable-receipt * {
+        visibility: visible !important;
     }
 }
 </style>

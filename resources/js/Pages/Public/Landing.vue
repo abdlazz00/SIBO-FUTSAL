@@ -2,7 +2,7 @@
 import { onMounted } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import PublicLayout from '@/Layouts/PublicLayout.vue';
-import { Dumbbell, Star, MessageSquare, ArrowRight, CheckCircle2 } from 'lucide-vue-next';
+import { Dumbbell, Star, MessageSquare, ArrowRight, CheckCircle2, MapPin } from 'lucide-vue-next';
 import gsap from 'gsap';
 
 interface Photo {
@@ -199,8 +199,23 @@ onMounted(() => {
             </div>
             
             <!-- Map Bento Box -->
-            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-4 rounded-lg shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] h-96 relative overflow-hidden map-anim">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4521.9052041076675!2d103.978525716913!3d1.1110437001833355!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d98b8dfaccab27%3A0xa988646eb2338a7f!2sVitka%20Futsal%20Tiban!5e1!3m2!1sid!2sid!4v1781756234129!5m2!1sid!2sid" class="w-full h-full border-0 rounded-sm" allowfullscreen="true" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            <div class="bg-verge-canvas-white border-2 border-verge-text-primary p-4 rounded-lg shadow-[6px_6px_0px_0px_rgba(19,19,19,1)] h-96 relative overflow-hidden map-anim flex items-center justify-center">
+                <!-- Fallback Map Card (Visible if offline / DNS error) -->
+                <div class="absolute inset-0 bg-verge-surface-light p-8 flex flex-col justify-center items-center text-center space-y-4 select-none z-0">
+                    <MapPin class="w-12 h-12 text-verge-ultraviolet" />
+                    <div>
+                        <h4 class="font-display text-lg font-bold uppercase text-verge-text-primary">Vitka Futsal Tiban</h4>
+                        <p class="font-sans text-[11px] text-verge-text-muted mt-1 max-w-sm">
+                            Jl. Gajah Mada, Kompleks The Vitka City, Tiban, Sekupang, Batam.
+                        </p>
+                    </div>
+                    <a href="https://maps.app.goo.gl/wK5zoRe6YoUCZ2GA7" target="_blank" class="px-5 py-2.5 bg-verge-canvas-black text-verge-canvas-white hover:bg-verge-text-muted dark:bg-verge-canvas-white dark:text-verge-canvas-black border border-verge-text-primary font-mono text-[10px] uppercase font-bold rounded-sm shadow-[3px_3px_0px_0px_rgba(19,19,19,0.15)] transition-colors">
+                        Buka di Google Maps
+                    </a>
+                </div>
+
+                <!-- Google Maps Iframe -->
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.0531580977464!2d103.9782522!3d1.1111666!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d98b8dfaccab27%3A0xa988646eb2338a7f!2sVitka%20Futsal%20Tiban!5e0!3m2!1sid!2sid!4v1718630000000!5m2!1sid!2sid" class="w-full h-full border-0 rounded-sm relative z-10 bg-transparent" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
         </section>
     </PublicLayout>

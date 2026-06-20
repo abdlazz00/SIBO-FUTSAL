@@ -91,10 +91,14 @@ class BookingController extends Controller
     }
 
     /**
-     * Export stub (will be fully implemented in Sprint 4).
+     * Export bookings to CSV.
      */
-    public function export()
+    public function export(Request $request, \App\Services\ExportService $exportService)
     {
-        return redirect()->back()->with('info', 'Fitur ekspor laporan akan diaktifkan pada Sprint 4.');
+        $filters = $request->only(['search', 'status', 'date']);
+        $filters['paginate'] = false;
+        $bookings = $this->bookingService->listBookings($filters);
+
+        return $exportService->exportBookingsCsv($bookings);
     }
 }
